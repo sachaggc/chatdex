@@ -9,6 +9,7 @@ import { Cat } from '@/types'
 import CatCard from '@/components/CatCard'
 import BottomNav from '@/components/BottomNav'
 import TopBar from '@/components/TopBar'
+import ProfileBar from '@/components/ProfileBar'
 import { DEFAULT_CATEGORIES, getRarityRelative } from '@/lib/rarity'
 
 interface Category { key: string; label: string; color: string }
@@ -89,6 +90,9 @@ export default function GalleriePage() {
           </button>
         </motion.div>
       </div>
+
+      {/* Barre de profil */}
+      <ProfileBar />
 
       {/* Filtres */}
       <AnimatePresence>

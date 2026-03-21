@@ -11,6 +11,8 @@ import { getRarity, DEFAULT_CATEGORIES } from '@/lib/rarity'
 import RarityBadge from '@/components/RarityBadge'
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
+import GossipBox from '@/components/GossipBox'
+import { useProfile } from '@/components/ProfileContext'
 
 const CatMap = dynamic(() => import('@/components/CatMap'), {
   ssr: false,
@@ -48,6 +50,7 @@ function computeStats(sightings: Sighting[]) {
 export default function CatDetailPage() {
   const { id }   = useParams<{ id: string }>()
   const router   = useRouter()
+  const { awardXp } = useProfile()
   const [cat, setCat]           = useState<CatWithSightings | null>(null)
   const [loading, setLoading]   = useState(true)
   const [lightbox, setLightbox] = useState<string | null>(null)
@@ -85,6 +88,7 @@ export default function CatDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cat_id: id, lat, lng, seen_at: new Date().toISOString() }),
       })
+      awardXp('CHECKIN', id)
       setQuickDone(true)
       const data = await fetch(`/api/cats/${id}`).then(r => r.json())
       setCat(data)
@@ -360,6 +364,9 @@ export default function CatDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Murmures de la Rue */}
+        <GossipBox catId={id} />
 
         {/* Fusionner */}
         <div className="pb-4">

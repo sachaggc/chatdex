@@ -10,6 +10,7 @@ import ImageUpload from '@/components/ImageUpload'
 import GeocodingInput from '@/components/GeocodingInput'
 import TopBar from '@/components/TopBar'
 import { findMatches, MatchResult } from '@/lib/catMatcher'
+import { useProfile } from '@/components/ProfileContext'
 
 interface Category { key: string; label: string; color: string }
 
@@ -22,8 +23,14 @@ function confidenceColor(c: number) {
   return              { bg: 'bg-amber-50',   border: 'border-amber-200',  text: 'text-amber-700',  bar: 'bg-amber-400' }
 }
 
+function isNightPhoto(date: Date | null): boolean {
+  const h = (date ?? new Date()).getHours()
+  return h >= 21 || h < 6
+}
+
 export default function CapturePage() {
   const router = useRouter()
+  const { awardXp } = useProfile()
   const [cats, setCats]             = useState<Cat[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [step, setStep]             = useState<Step>('photo')
@@ -112,6 +119,9 @@ export default function CapturePage() {
       })
       if (sr.status === 401) throw new Error('Non connecté — va dans Réglages pour te connecter')
       if (!sr.ok) { const e = await sr.json().catch(() => ({})); throw new Error(e.error ?? 'Erreur enregistrement') }
+      // XP check-in + photo de nuit
+      awardXp('CHECKIN', catId)
+      if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', catId)
       router.push(`/cats/${catId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -145,6 +155,10 @@ export default function CapturePage() {
           seen_at: photoDate?.toISOString() ?? new Date().toISOString(),
         }),
       })
+      // XP nouveau chat + bonuses
+      awardXp('NEW_CAT', newCat.id)
+      if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', newCat.id)
+      if (street.trim()) awardXp('NEW_STREET', newCat.id)
       router.push(`/cats/${newCat.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -333,6 +347,8 @@ export default function CapturePage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ cat_id: newCat.id, photo_url: url, lat: gps?.lat ?? null, lng: gps?.lng ?? null, street: street.trim() || null, seen_at: photoDate?.toISOString() ?? new Date().toISOString() }),
                         })
+                        awardXp('NEW_CAT', newCat.id)
+                        if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', newCat.id)
                         router.push(`/cats/${newCat.id}/edit`)
                       } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setLoading(false) }
                     }}

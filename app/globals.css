@@ -127,6 +127,18 @@ body {
   100% { background-position: -100% 0; }
 }
 
+/* Glow légendaire */
+.legendary-glow {
+  border-color: var(--glow-color, #7C3AED) !important;
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--glow-color, #7C3AED) 35%, transparent),
+              0 4px 20px rgba(0, 0, 0, 0.1);
+  animation: legendary-pulse 3s ease-in-out infinite;
+}
+@keyframes legendary-pulse {
+  0%, 100% { box-shadow: 0 0 10px 1px color-mix(in srgb, var(--glow-color, #7C3AED) 30%, transparent), 0 4px 20px rgba(0,0,0,0.1); }
+  50%       { box-shadow: 0 0 20px 4px color-mix(in srgb, var(--glow-color, #7C3AED) 50%, transparent), 0 6px 28px rgba(0,0,0,0.14); }
+}
+
 /* ── Motif zellige (léger, moderne) ─────────────────────── */
 .zellige-bg {
   background-color: var(--color-cream);

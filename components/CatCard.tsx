@@ -26,7 +26,9 @@ export default function CatCard({ cat, index = 0, rarityOverride }: Props) {
       whileTap={{ scale: 0.96, transition: { duration: 0.1 } }}
     >
       <Link href={`/cats/${cat.id}`} className="block">
-        <div className={`cat-card ${rarity.isShiny ? 'shiny-card' : ''}`}>
+        <div className={`cat-card ${rarity.isShiny ? 'shiny-card' : ''} ${rarity.level <= 1 ? 'legendary-glow' : ''}`}
+          style={rarity.level <= 1 ? { '--glow-color': rarity.color } as React.CSSProperties : undefined}
+        >
 
           {/* Bande catégorie en haut */}
           <div className="h-[3px]" style={{ background: catDef?.color ?? '#DFC9AE' }} />

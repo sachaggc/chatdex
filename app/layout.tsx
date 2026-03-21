@@ -4,6 +4,8 @@ import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'
 import WeatherOverlay from '@/components/WeatherOverlay'
+import { ProfileProvider } from '@/components/ProfileContext'
+import ProfilePicker from '@/components/ProfilePicker'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -58,10 +60,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: timeScript }} />
       </head>
       <body className="min-h-svh">
-        <ThemeProvider />
-        <ServiceWorkerRegistrar />
-        <WeatherOverlay />
-        {children}
+        <ProfileProvider>
+          <ThemeProvider />
+          <ServiceWorkerRegistrar />
+          <WeatherOverlay />
+          <ProfilePicker />
+          {children}
+        </ProfileProvider>
       </body>
     </html>
   )
