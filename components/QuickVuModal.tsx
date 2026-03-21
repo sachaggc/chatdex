@@ -16,8 +16,9 @@ export default function QuickVuModal({ open, onClose }: Props) {
   const { awardXp } = useProfile()
   const [cats, setCats]     = useState<Cat[]>([])
   const [search, setSearch] = useState('')
-  const [done, setDone]     = useState<string | null>(null) // cat id just registered
+  const [done, setDone]       = useState<string | null>(null) // cat id just registered
   const [loading, setLoading] = useState<string | null>(null) // cat id being submitted
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'searching' | 'found' | 'failed'>('idle')
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function QuickVuModal({ open, onClose }: Props) {
       }).catch(() => {})
       setSearch('')
       setDone(null)
+      setGpsStatus('idle')
       setTimeout(() => searchRef.current?.focus(), 200)
     }
   }, [open])
@@ -38,17 +40,23 @@ export default function QuickVuModal({ open, onClose }: Props) {
   async function quickVu(cat: Cat) {
     if (loading) return
     setLoading(cat.id)
+    setGpsStatus('searching')
     try {
       let lat: number | null = null
       let lng: number | null = null
       // Géoloc rapide (on n'attend pas trop)
       await new Promise<void>(resolve => {
-        if (!navigator.geolocation) { resolve(); return }
-        const t = setTimeout(resolve, 3000)
+        if (!navigator.geolocation) { setGpsStatus('failed'); resolve(); return }
+        const t = setTimeout(() => { setGpsStatus('failed'); resolve() }, 5000)
         navigator.geolocation.getCurrentPosition(
-          pos => { lat = pos.coords.latitude; lng = pos.coords.longitude; clearTimeout(t); resolve() },
-          () => { clearTimeout(t); resolve() },
-          { timeout: 3000, enableHighAccuracy: false }
+          pos => {
+            lat = pos.coords.latitude
+            lng = pos.coords.longitude
+            setGpsStatus('found')
+            clearTimeout(t); resolve()
+          },
+          () => { setGpsStatus('failed'); clearTimeout(t); resolve() },
+          { timeout: 5000, enableHighAccuracy: true }
         )
       })
       await fetch('/api/sightings', {
@@ -100,9 +108,27 @@ export default function QuickVuModal({ open, onClose }: Props) {
                 <Eye size={18} className="text-brand" />
                 <p className="font-display font-bold text-text text-base">Vu rapide</p>
               </div>
-              <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full bg-surface hover:bg-border transition-colors">
-                <X size={16} className="text-muted" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Indicateur GPS */}
+                {gpsStatus === 'searching' && (
+                  <span className="flex items-center gap-1 text-[11px] text-amber-500 font-semibold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    GPS…
+                  </span>
+                )}
+                {gpsStatus === 'found' && (
+                  <span className="flex items-center gap-1 text-[11px] text-teal font-semibold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-teal" />
+                    📍
+                  </span>
+                )}
+                {gpsStatus === 'failed' && (
+                  <span className="text-[11px] text-muted">sans GPS</span>
+                )}
+                <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full bg-surface hover:bg-border transition-colors">
+                  <X size={16} className="text-muted" />
+                </button>
+              </div>
             </div>
 
             {/* Recherche */}
