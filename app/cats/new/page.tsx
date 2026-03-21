@@ -12,6 +12,7 @@ export default function NewCatPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  const [unnamed, setUnnamed]     = useState(false)
   const [name, setName]           = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory]   = useState('')
@@ -47,7 +48,7 @@ export default function NewCatPage() {
       const res = await fetch('/api/cats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), description: description.trim() || null, category: category || null, character_traits: traits, main_photo_url: mainPhotoUrl }),
+        body: JSON.stringify({ name: unnamed ? undefined : name.trim(), unnamed, description: description.trim() || null, category: category || null, character_traits: traits, main_photo_url: mainPhotoUrl }),
       })
       if (!res.ok) throw new Error('Erreur création')
       const newCat = await res.json()
@@ -86,8 +87,24 @@ export default function NewCatPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-text mb-1">Nom du chat <span className="text-brand">*</span></label>
-          <input type="text" placeholder="Ex: Le Gros Roux, Whiskers…" value={name} onChange={e => setName(e.target.value)} className="input-field" required />
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-semibold text-text">
+              Nom du chat {!unnamed && <span className="text-brand">*</span>}
+            </label>
+            <button type="button" onClick={() => setUnnamed(!unnamed)}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-display font-bold border transition-colors ${
+                unnamed ? 'bg-gold/15 border-gold/50 text-gold' : 'bg-surface border-border text-muted'
+              }`}>
+              ? {unnamed ? 'À nommer (actif)' : 'Je ne sais pas son nom'}
+            </button>
+          </div>
+          {unnamed ? (
+            <div className="input-field text-muted italic bg-parchment/50 cursor-not-allowed">
+              Un nom temporaire sera généré automatiquement
+            </div>
+          ) : (
+            <input type="text" placeholder="Ex: Le Gros Roux, Whiskers…" value={name} onChange={e => setName(e.target.value)} className="input-field" required={!unnamed} />
+          )}
         </div>
 
         <div>

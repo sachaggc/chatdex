@@ -3,6 +3,7 @@ export type Category = 'fou' | 'pacha' | 'marxiste' | 'babos' | 'parkour'
 export interface Cat {
   id: string
   name: string
+  unnamed: boolean
   description: string | null
   category: Category | null
   character_traits: string[]

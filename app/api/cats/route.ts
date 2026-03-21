@@ -35,10 +35,17 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const supabase = getSupabaseAdmin()
 
+  // Si unnamed, on génère un nom temporaire unique
+  const isUnnamed = !!body.unnamed
+  const name = isUnnamed
+    ? `Chat Mystère #${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+    : body.name
+
   const { data, error } = await supabase
     .from('cats')
     .insert({
-      name: body.name,
+      name,
+      unnamed: isUnnamed,
       description: body.description ?? null,
       category: body.category ?? null,
       character_traits: body.character_traits ?? [],

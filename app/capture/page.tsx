@@ -180,13 +180,42 @@ export default function CapturePage() {
                 <p className="font-display font-bold text-lg text-text mb-3">C&apos;est quel chat ?</p>
 
                 {/* Nouveau chat (inline) */}
-                <button
-                  onClick={() => setStep('new-cat-form')}
-                  className="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-brand/40 bg-brand/5 p-4 text-brand mb-3 hover:bg-brand/10 transition-colors font-display font-semibold"
-                >
-                  <span className="text-xl">+</span>
-                  Nouveau chat (jamais recensé)
-                </button>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setStep('new-cat-form')}
+                    className="flex flex-1 items-center gap-2 rounded-xl border-2 border-dashed border-brand/40 bg-brand/5 p-3 text-brand hover:bg-brand/10 transition-colors font-display font-semibold text-sm"
+                  >
+                    <span className="text-lg">+</span> Nouveau chat
+                  </button>
+                  {/* À nommer */}
+                  <button
+                    onClick={async () => {
+                      setLoading(true); setError('')
+                      try {
+                        const fd = new FormData(); fd.append('file', photoFile!)
+                        const up = await fetch('/api/upload', { method: 'POST', body: fd })
+                        if (!up.ok) throw new Error('Erreur upload')
+                        const { url } = await up.json()
+                        const catRes = await fetch('/api/cats', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ unnamed: true, main_photo_url: url }),
+                        })
+                        const newCat = await catRes.json()
+                        await fetch('/api/sightings', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ cat_id: newCat.id, photo_url: url, lat: gps?.lat ?? null, lng: gps?.lng ?? null, street: street.trim() || null, seen_at: photoDate?.toISOString() ?? new Date().toISOString() }),
+                        })
+                        router.push(`/cats/${newCat.id}/edit`)
+                      } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setLoading(false) }
+                    }}
+                    disabled={loading}
+                    className="flex flex-1 items-center gap-2 rounded-xl border-2 border-dashed border-gold/50 bg-gold/5 p-3 text-gold hover:bg-gold/10 transition-colors font-display font-semibold text-sm disabled:opacity-40"
+                  >
+                    <span className="text-lg">?</span> À nommer
+                  </button>
+                </div>
 
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {cats.map(cat => (

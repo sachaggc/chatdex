@@ -57,6 +57,7 @@ export default function EditCatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
+          unnamed: false, // Dès qu'on modifie avec un vrai nom, on retire le flag
           description: description.trim() || null,
           category: category || null,
           character_traits: traits,
@@ -82,6 +83,11 @@ export default function EditCatPage() {
       <TopBar backHref={`/cats/${id}`} title={`Modifier ${cat.name}`} />
 
       <form onSubmit={handleSubmit} className="px-4 py-5 max-w-lg mx-auto space-y-5">
+        {cat.unnamed && (
+          <div className="flex items-center gap-2 rounded-xl bg-gold/10 border border-gold/30 p-3 text-sm text-gold font-semibold">
+            <span>?</span> Ce chat est en attente d&apos;un nom — donne-lui le sien ci-dessous !
+          </div>
+        )}
 
         <ImageUpload
           onImageReady={(file) => setNewPhotoFile(file)}
