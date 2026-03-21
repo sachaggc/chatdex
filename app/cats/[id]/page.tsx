@@ -388,11 +388,27 @@ export default function CatDetailPage() {
                     )}
                     {s.notes && <p className="text-sm text-muted italic mt-0.5">{s.notes}</p>}
                   </div>
-                  {s.photo_url && (
-                    <div className="relative h-12 w-12 shrink-0 rounded-lg overflow-hidden cursor-pointer" onClick={e => { e.stopPropagation(); setLightbox(s.photo_url!) }}>
-                      <Image src={s.photo_url} alt={`Obs ${i + 1}`} fill className="object-cover" />
-                    </div>
-                  )}
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {s.photo_url && (
+                      <div className="relative h-12 w-12 rounded-lg overflow-hidden cursor-pointer" onClick={e => { e.stopPropagation(); setLightbox(s.photo_url!) }}>
+                        <Image src={s.photo_url} alt={`Obs ${i + 1}`} fill className="object-cover" />
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Supprimer cette observation ?')) return
+                        const res = await fetch(`/api/sightings/${s.id}`, { method: 'DELETE' })
+                        if (res.ok) {
+                          const data = await fetch(`/api/cats/${id}`).then(r => r.json())
+                          setCat(data)
+                        }
+                      }}
+                      className="text-border hover:text-red-400 transition-colors p-0.5"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
