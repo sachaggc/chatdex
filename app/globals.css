@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme inline {
+@theme {
   /* ── Palette Pokédex Marocain Futuriste ── */
   --color-brand:        #C34B32;
   --color-brand-light:  #D96B50;
@@ -32,13 +32,65 @@
   color-scheme: light;
 }
 
+/* ── Thèmes dynamiques par heure ─────────────────────────── */
+/* Dawn : tons roses chauds */
+[data-time="dawn"] {
+  --color-brand:     #B85A3C;
+  --color-surface:   #FFF8F2;
+  --color-cream:     #FFE8D4;
+  --color-parchment: #F5D8BC;
+  --color-border:    #E8C8A0;
+}
+
+/* Sunset : orange/ambre */
+[data-time="sunset"] {
+  --color-brand:     #D04A18;
+  --color-gold:      #E0881A;
+  --color-surface:   #FFF4E6;
+  --color-cream:     #FFE0B8;
+  --color-parchment: #F5CCA0;
+  --color-border:    #E8B880;
+  --color-navy:      #2A1F3A;
+}
+
+/* Evening : mode sombre doux */
+[data-time="evening"] {
+  color-scheme: dark;
+  --color-surface:   #1E2538;
+  --color-cream:     #161D2E;
+  --color-parchment: #232B40;
+  --color-text:      #DDD0BE;
+  --color-muted:     #8A7A6A;
+  --color-border:    #2E3A52;
+  --color-navy:      #0E1525;
+}
+
+/* Night : mode nuit complet */
+[data-time="night"] {
+  color-scheme: dark;
+  --color-surface:   #141820;
+  --color-cream:     #0E1118;
+  --color-parchment: #1A1E2A;
+  --color-text:      #DDD0BE;
+  --color-muted:     #8A7A6A;
+  --color-border:    #252C3E;
+  --color-navy:      #080C14;
+  --color-brand:     #E0604A;
+}
+
+/* Transition douce entre thèmes */
+html {
+  transition: background-color 0.8s ease, color 0.5s ease;
+}
+
 * { box-sizing: border-box; }
 
 body {
-  background: #F2E8D9;
-  color: #1A1007;
+  background: var(--color-cream);
+  color: var(--color-text);
   font-family: var(--font-dm, 'DM Sans', system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
+  transition: background 0.6s ease, color 0.6s ease;
 }
 
 /* ── Utilitaires ─────────────────────────────────────────── */
@@ -46,10 +98,10 @@ body {
 
 /* ── Carte chat (style carte postale marocaine) ─────────── */
 .cat-card {
-  background: #FDFAF6;
+  background: var(--color-surface);
   border-radius: 14px;
   overflow: hidden;
-  border: 1.5px solid #DFC9AE;
+  border: 1.5px solid var(--color-border);
   box-shadow: 0 2px 8px rgba(26, 16, 7, 0.06);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   cursor: pointer;
@@ -62,8 +114,8 @@ body {
 
 /* Effet shiny */
 .shiny-card {
-  border-color: #C98A2F !important;
-  box-shadow: 0 0 0 1px #C98A2F44, 0 4px 20px rgba(201, 138, 47, 0.25) !important;
+  border-color: var(--color-gold) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-gold) 27%, transparent), 0 4px 20px rgba(201, 138, 47, 0.25) !important;
 }
 .shiny-shimmer {
   background: linear-gradient(135deg, #FFF9E6 0%, #FFF0B0 40%, #FFF9E6 60%, #FFE070 100%);
@@ -77,7 +129,7 @@ body {
 
 /* ── Motif zellige (léger, moderne) ─────────────────────── */
 .zellige-bg {
-  background-color: #F2E8D9;
+  background-color: var(--color-cream);
   background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23C34B32' fill-opacity='0.04'%3E%3Cpolygon points='10,0 20,10 10,20 0,10'/%3E%3C/g%3E%3C/svg%3E");
 }
 
@@ -85,32 +137,33 @@ body {
 .bottom-nav {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  background: #FDFAF6;
-  border-top: 1px solid #DFC9AE;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
   backdrop-filter: blur(12px);
+  transition: background 0.6s ease, border-color 0.6s ease;
 }
 
 /* ── Inputs ──────────────────────────────────────────────── */
 .input-field {
   width: 100%;
-  background: #FDFAF6;
-  border: 1.5px solid #DFC9AE;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
   border-radius: 10px;
   padding: 11px 14px;
   font-size: 16px;
-  color: #1A1007;
+  color: var(--color-text);
   font-family: inherit;
   outline: none;
   transition: border-color 0.15s;
 }
-.input-field::placeholder { color: #7A6352; opacity: 0.6; }
-.input-field:focus { border-color: #C34B32; }
+.input-field::placeholder { color: var(--color-muted); opacity: 0.6; }
+.input-field:focus { border-color: var(--color-brand); }
 
 /* ── Boutons ─────────────────────────────────────────────── */
 .btn-primary {
-  background: #C34B32;
+  background: var(--color-brand);
   color: white;
   border: none;
   border-radius: 12px;
@@ -122,14 +175,14 @@ body {
   transition: background 0.15s, transform 0.1s;
   letter-spacing: 0.02em;
 }
-.btn-primary:hover  { background: #9E3825; }
+.btn-primary:hover  { background: var(--color-brand-dark); }
 .btn-primary:active { transform: scale(0.97); }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn-secondary {
   background: transparent;
-  color: #C34B32;
-  border: 1.5px solid #C34B32;
+  color: var(--color-brand);
+  border: 1.5px solid var(--color-brand);
   border-radius: 12px;
   padding: 12px 24px;
   font-size: 15px;
@@ -138,7 +191,7 @@ body {
   cursor: pointer;
   transition: background 0.15s;
 }
-.btn-secondary:hover { background: #C34B3210; }
+.btn-secondary:hover { background: color-mix(in srgb, var(--color-brand) 6%, transparent); }
 
 /* ── Stamp rareté (coin carte) ───────────────────────────── */
 .rarity-stamp {
@@ -164,7 +217,7 @@ body {
 /* ── Scrollbar ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #DFC9AE; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
 
 /* ── Lignes postale (décoratives) ────────────────────────── */
 .postcard-lines {
@@ -176,6 +229,14 @@ body {
 .postcard-lines span {
   display: block;
   height: 1px;
-  background: #DFC9AE;
+  background: var(--color-border);
   border-radius: 1px;
+}
+
+/* ── Pluie ────────────────────────────────────────────────── */
+@keyframes rain-fall {
+  0%   { transform: translateY(-100px) rotate(10deg); opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(10deg); opacity: 0; }
 }

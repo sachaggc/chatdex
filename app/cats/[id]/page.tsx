@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Eye, Camera, MapPin, Edit3, X, Clock, BarChart2, GitMerge } from 'lucide-react'
+import { Eye, Camera, MapPin, Edit3, X, Clock, BarChart2, GitMerge, Trash2 } from 'lucide-react'
 import { CatWithSightings, Sighting } from '@/types'
 import { getRarity, DEFAULT_CATEGORIES } from '@/lib/rarity'
 import RarityBadge from '@/components/RarityBadge'
@@ -57,6 +57,7 @@ export default function CatDetailPage() {
   const [allCats, setAllCats]           = useState<{id:string;name:string}[]>([])
   const [mergeTarget, setMergeTarget]   = useState('')
   const [mergeLoading, setMergeLoading] = useState(false)
+  const [deleteMode, setDeleteMode]     = useState(false)
 
   useEffect(() => {
     fetch(`/api/cats/${id}`)
@@ -107,6 +108,27 @@ export default function CatDetailPage() {
     })
     if (res.ok) router.push(`/cats/${mergeTarget}`)
     else setMergeLoading(false)
+  }
+
+  async function deleteSightingPhoto(sightingId: string, photoUrl: string) {
+    if (!confirm('Supprimer cette photo ?')) return
+    // Supprime l'observation entière si elle n'a que la photo (pas de notes/street)
+    const sighting = cat?.sightings.find(s => s.id === sightingId)
+    const res = await fetch(`/api/sightings/${sightingId}`, { method: 'DELETE' })
+    if (!res.ok) return
+    // Si c'était la photo principale du chat, on met à jour
+    const data = await fetch(`/api/cats/${id}`).then(r => r.json())
+    setCat(data)
+    if (cat?.main_photo_url === photoUrl) {
+      const nextPhoto = data.sightings?.find((s: {photo_url: string|null}) => s.photo_url)?.photo_url ?? null
+      await fetch(`/api/cats/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ main_photo_url: nextPhoto }),
+      })
+      const updated = await fetch(`/api/cats/${id}`).then(r => r.json())
+      setCat(updated)
+    }
   }
 
   if (loading) return (
@@ -236,11 +258,31 @@ export default function CatDetailPage() {
         {/* Galerie */}
         {photos.length > 0 && (
           <div>
-            <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2">Galerie · {photos.length} photos</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-display font-bold text-muted uppercase tracking-widest">Galerie · {photos.length} photos</p>
+              <button
+                onClick={() => setDeleteMode(!deleteMode)}
+                className={`text-xs font-semibold transition-colors ${deleteMode ? 'text-red-500' : 'text-muted hover:text-text'}`}
+              >
+                {deleteMode ? 'Terminer' : 'Gérer'}
+              </button>
+            </div>
             <div className="grid grid-cols-3 gap-1.5">
-              {photos.map((url, i) => (
-                <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-parchment cursor-pointer" onClick={() => setLightbox(url)}>
-                  <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" />
+              {cat.sightings.filter(s => s.photo_url).map((s, i) => (
+                <div
+                  key={s.id}
+                  className="relative aspect-square rounded-lg overflow-hidden bg-parchment cursor-pointer"
+                  onClick={() => !deleteMode && setLightbox(s.photo_url!)}
+                >
+                  <Image src={s.photo_url!} alt={`Photo ${i + 1}`} fill className="object-cover" />
+                  {deleteMode && (
+                    <button
+                      onClick={e => { e.stopPropagation(); deleteSightingPhoto(s.id, s.photo_url!) }}
+                      className="absolute inset-0 flex items-center justify-center bg-black/50"
+                    >
+                      <Trash2 size={20} className="text-white" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -279,7 +321,7 @@ export default function CatDetailPage() {
                     {s.notes && <p className="text-sm text-muted italic mt-0.5">{s.notes}</p>}
                   </div>
                   {s.photo_url && (
-                    <div className="relative h-12 w-12 shrink-0 rounded-lg overflow-hidden cursor-pointer" onClick={() => setLightbox(s.photo_url!)}>
+                    <div className="relative h-12 w-12 shrink-0 rounded-lg overflow-hidden cursor-pointer" onClick={e => { e.stopPropagation(); setLightbox(s.photo_url!) }}>
                       <Image src={s.photo_url} alt={`Obs ${i + 1}`} fill className="object-cover" />
                     </div>
                   )}
@@ -318,9 +360,9 @@ export default function CatDetailPage() {
 
       {/* Lightbox */}
       {lightbox && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4" onClick={() => setLightbox(null)}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-4" onClick={() => setLightbox(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox} alt="Photo agrandie" className="max-h-full max-w-full rounded-xl object-contain" />
+          <img src={lightbox} alt="Photo agrandie" className="max-h-full max-w-full rounded-xl object-contain" onClick={e => e.stopPropagation()} />
           <button className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white" onClick={() => setLightbox(null)}>
             <X size={18} />
           </button>

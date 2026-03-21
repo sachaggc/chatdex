@@ -1,5 +1,6 @@
 import { RarityInfo } from '@/types'
 
+// Seuils fixes (utilisés quand on n'a pas le contexte de tous les chats)
 export function getRarity(count: number): RarityInfo {
   if (count === 0)  return { label: 'Inconnu',       level: 6, color: '#9CA3AF', bgColor: '#F3F4F6', isShiny: false, emoji: '?' }
   if (count === 1)  return { label: 'Shiny Fantôme', level: 0, color: '#C98A2F', bgColor: '#FFF9E6', isShiny: true,  emoji: '✦' }
@@ -8,6 +9,29 @@ export function getRarity(count: number): RarityInfo {
   if (count <= 15)  return { label: 'Rare',          level: 3, color: '#15803D', bgColor: '#F0FDF4', isShiny: false, emoji: '●' }
   if (count <= 30)  return { label: 'Peu commun',    level: 4, color: '#6B7280', bgColor: '#F9FAFB', isShiny: false, emoji: '◉' }
   return              { label: 'Commun',          level: 5, color: '#9CA3AF', bgColor: '#F3F4F6', isShiny: false, emoji: '○' }
+}
+
+// Rareté relative : basée sur le rang du chat parmi tous les autres.
+// Moins il est vu par rapport aux autres → plus il est rare.
+// allCounts : tableau des sightings_count de TOUS les chats nommés.
+export function getRarityRelative(count: number, allCounts: number[]): RarityInfo {
+  if (count === 0) return { label: 'Inconnu', level: 6, color: '#9CA3AF', bgColor: '#F3F4F6', isShiny: false, emoji: '?' }
+
+  const valid = allCounts.filter(c => c > 0)
+  // Pas assez de données → seuils fixes
+  if (valid.length < 3) return getRarity(count)
+
+  // Percentile depuis le bas : % de chats ayant un count ≤ au sien
+  // Bas percentile = peu de chats ont moins de sightings → très rare
+  const below = valid.filter(c => c <= count).length
+  const pct = below / valid.length  // 0 = le plus rare, 1 = le plus commun
+
+  if (pct <= 0.05) return { label: 'Shiny Fantôme', level: 0, color: '#C98A2F', bgColor: '#FFF9E6', isShiny: true,  emoji: '✦' }
+  if (pct <= 0.18) return { label: 'Légendaire',    level: 1, color: '#7C3AED', bgColor: '#F5F3FF', isShiny: false, emoji: '◆' }
+  if (pct <= 0.35) return { label: 'Ultra Rare',    level: 2, color: '#1D4ED8', bgColor: '#EFF6FF', isShiny: false, emoji: '▲' }
+  if (pct <= 0.55) return { label: 'Rare',          level: 3, color: '#15803D', bgColor: '#F0FDF4', isShiny: false, emoji: '●' }
+  if (pct <= 0.80) return { label: 'Peu commun',    level: 4, color: '#6B7280', bgColor: '#F9FAFB', isShiny: false, emoji: '◉' }
+  return                   { label: 'Commun',        level: 5, color: '#9CA3AF', bgColor: '#F3F4F6', isShiny: false, emoji: '○' }
 }
 
 // Icônes Lucide associées à chaque rareté

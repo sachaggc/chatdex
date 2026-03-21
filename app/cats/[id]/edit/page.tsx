@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
+import Image from 'next/image'
 import { Cat } from '@/types'
 import ImageUpload from '@/components/ImageUpload'
 import TopBar from '@/components/TopBar'
@@ -22,11 +23,13 @@ export default function EditCatPage() {
   const [category, setCategory]   = useState('')
   const [traitsInput, setTraitsInput] = useState('')
   const [newPhotoFile, setNewPhotoFile] = useState<File | null>(null)
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false)
 
   useEffect(() => {
     fetch(`/api/cats/${id}`).then(r => r.json()).then((data: Cat) => {
       setCat(data)
-      setName(data.name)
+      // Pour les chats "à nommer", le champ nom commence vide (pas le nom temp)
+      setName(data.unnamed ? '' : (data.name ?? ''))
       setDescription(data.description ?? '')
       setCategory(data.category ?? '')
       setTraitsInput((data.character_traits ?? []).join(', '))
@@ -36,6 +39,7 @@ export default function EditCatPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!name.trim()) { setError('Le nom est requis'); return }
     setLoading(true); setError('')
 
     try {
@@ -57,7 +61,7 @@ export default function EditCatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          unnamed: false, // Dès qu'on modifie avec un vrai nom, on retire le flag
+          unnamed: false,
           description: description.trim() || null,
           category: category || null,
           character_traits: traits,
@@ -78,25 +82,57 @@ export default function EditCatPage() {
     </div>
   )
 
+  // Pour les chats "à nommer" : retour à l'accueil (la fiche détail n'est pas encore utile)
+  const backHref = cat.unnamed ? '/' : `/cats/${id}`
+
   return (
     <div className="min-h-svh pb-10">
-      <TopBar backHref={`/cats/${id}`} title={`Modifier ${cat.name}`} />
+      <TopBar backHref={backHref} title={cat.unnamed ? 'Nommer ce chat' : `Modifier ${cat.name}`} />
 
       <form onSubmit={handleSubmit} className="px-4 py-5 max-w-lg mx-auto space-y-5">
+
+        {/* Bandeau "à nommer" */}
         {cat.unnamed && (
           <div className="flex items-center gap-2 rounded-xl bg-gold/10 border border-gold/30 p-3 text-sm text-gold font-semibold">
-            <span>?</span> Ce chat est en attente d&apos;un nom — donne-lui le sien ci-dessous !
+            <span>?</span> Donne un nom à ce chat pour l&apos;ajouter au Chatdex !
           </div>
         )}
 
-        <ImageUpload
-          onImageReady={(file) => setNewPhotoFile(file)}
-          label="Nouvelle photo principale (optionnel)"
-        />
+        {/* Photo : affiche la photo existante + option de changement */}
+        {cat.main_photo_url && !showPhotoUpload ? (
+          <div>
+            <label className="block text-sm font-semibold text-text mb-2">Photo principale</label>
+            <div className="relative aspect-video rounded-xl overflow-hidden border border-border">
+              <Image src={cat.main_photo_url} alt={cat.name} fill className="object-cover" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPhotoUpload(true)}
+              className="mt-2 text-sm text-muted hover:text-text underline underline-offset-2 transition-colors"
+            >
+              Changer la photo
+            </button>
+          </div>
+        ) : (
+          <ImageUpload
+            onImageReady={(file) => setNewPhotoFile(file)}
+            label={cat.main_photo_url ? 'Nouvelle photo' : 'Photo principale (optionnel)'}
+          />
+        )}
 
         <div>
-          <label className="block text-sm font-semibold text-text mb-1">Nom *</label>
-          <input type="text" value={name} onChange={e => setName(e.target.value)} className="input-field" required />
+          <label className="block text-sm font-semibold text-text mb-1">
+            Nom {cat.unnamed && <span className="text-brand">*</span>}
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="input-field"
+            placeholder={cat.unnamed ? 'Ex: Le Gros Roux, Whiskers…' : ''}
+            autoFocus={cat.unnamed}
+            required
+          />
         </div>
 
         <div>
@@ -134,21 +170,23 @@ export default function EditCatPage() {
         {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
         <button type="submit" disabled={loading} className="btn-primary w-full">
-          {loading ? 'Enregistrement…' : 'Sauvegarder'}
+          {loading ? 'Enregistrement…' : cat.unnamed ? 'Nommer ce chat !' : 'Sauvegarder'}
         </button>
 
-        {/* Supprimer */}
-        <button
-          type="button"
-          onClick={async () => {
-            if (!confirm(`Supprimer ${cat.name} définitivement ?`)) return
-            await fetch(`/api/cats/${id}`, { method: 'DELETE' })
-            router.push('/')
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 py-3 text-sm font-display font-semibold text-red-500 hover:bg-red-50 transition-colors"
-        >
-          <Trash2 size={15} /> Supprimer ce chat
-        </button>
+        {/* Supprimer — masqué pour les chats "à nommer" */}
+        {!cat.unnamed && (
+          <button
+            type="button"
+            onClick={async () => {
+              if (!confirm(`Supprimer ${cat.name} définitivement ?`)) return
+              await fetch(`/api/cats/${id}`, { method: 'DELETE' })
+              router.push('/')
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 py-3 text-sm font-display font-semibold text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={15} /> Supprimer ce chat
+          </button>
+        )}
       </form>
     </div>
   )

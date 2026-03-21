@@ -1,15 +1,14 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Lock } from 'lucide-react'
 
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get('from') ?? '/'
-  const [code, setCode]     = useState('')
-  const [error, setError]   = useState('')
+  const [code, setCode]       = useState('')
+  const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -20,8 +19,13 @@ function LoginForm() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
     })
-    if (res.ok) { router.push(from); router.refresh() }
-    else { setError('Code incorrect.'); setLoading(false) }
+    if (res.ok) {
+      // Rechargement complet pour que le cookie soit pris en compte par le proxy
+      window.location.href = from
+    } else {
+      setError('Code incorrect.')
+      setLoading(false)
+    }
   }
 
   return (
