@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { Trash2 } from 'lucide-react'
 import { Cat } from '@/types'
 import ImageUpload from '@/components/ImageUpload'
 import TopBar from '@/components/TopBar'
@@ -128,6 +129,19 @@ export default function EditCatPage() {
 
         <button type="submit" disabled={loading} className="btn-primary w-full">
           {loading ? 'Enregistrement…' : 'Sauvegarder'}
+        </button>
+
+        {/* Supprimer */}
+        <button
+          type="button"
+          onClick={async () => {
+            if (!confirm(`Supprimer ${cat.name} définitivement ?`)) return
+            await fetch(`/api/cats/${id}`, { method: 'DELETE' })
+            router.push('/')
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 py-3 text-sm font-display font-semibold text-red-500 hover:bg-red-50 transition-colors"
+        >
+          <Trash2 size={15} /> Supprimer ce chat
         </button>
       </form>
     </div>
