@@ -11,11 +11,13 @@ export async function GET() {
     const code = parseInt(data.current_condition?.[0]?.weatherCode ?? '113')
 
     // https://www.worldweatheronline.com/developer/api/docs/weather-icons.aspx
+    // 113=Sunny, 116=Partly cloudy, 119=Cloudy, 122=Overcast, 143-185=Mist/fog/patchy
+    // 176+=Rain, 200+=Storm
     const condition =
-      code <= 116 ? 'clear' :
-      code <= 122 ? 'cloudy' :
+      code <= 113 ? 'clear' :       // uniquement ciel dégagé
+      code <= 175 ? 'cloudy' :      // partiellement nuageux → brume → brouillard
       (code >= 200 && code <= 221) ? 'storm' :
-      (code >= 176 && code <= 314) ? 'rain' :
+      code <= 314 ? 'rain' :
       'clear'
 
     return NextResponse.json({ condition, code })

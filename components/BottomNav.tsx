@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Grid2X2, Map, Camera, Settings } from 'lucide-react'
+import { Grid2X2, BarChart2, Camera, Flame, Settings } from 'lucide-react'
 
 const NAV = [
-  { href: '/',         label: 'Galerie',  Icon: Grid2X2 },
-  { href: '/map',      label: 'Carte',    Icon: Map     },
-  { href: '/settings', label: 'Réglages', Icon: Settings },
+  { href: '/',        label: 'Galerie',  Icon: Grid2X2  },
+  { href: '/stats',   label: 'Stats',    Icon: BarChart2 },
+  { href: '/aura',    label: 'Aura',     Icon: Flame    },
+  { href: '/settings',label: 'Réglages', Icon: Settings },
 ]
 
 export default function BottomNav() {
@@ -20,7 +21,7 @@ export default function BottomNav() {
         {NAV.slice(0, 2).map(({ href, label, Icon }) => {
           const active = pathname === href
           return (
-            <Link key={href} href={href} className={`flex flex-col items-center gap-1 px-4 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
+            <Link key={href} href={href} className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
               <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
               <span className={`text-[10px] font-display font-semibold tracking-wide ${active ? 'text-brand' : 'text-muted'}`}>{label}</span>
             </Link>
@@ -38,20 +39,12 @@ export default function BottomNav() {
         {NAV.slice(2).map(({ href, label, Icon }) => {
           const active = pathname === href
           return (
-            <Link key={href} href={href} className={`flex flex-col items-center gap-1 px-4 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
+            <Link key={href} href={href} className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
               <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
               <span className={`text-[10px] font-display font-semibold tracking-wide ${active ? 'text-brand' : 'text-muted'}`}>{label}</span>
             </Link>
           )
         })}
-
-        {/* Bouton + Nouveau chat */}
-        <Link href="/cats/new" className={`flex flex-col items-center gap-1 px-4 py-1 transition-colors ${pathname === '/cats/new' ? 'text-brand' : 'text-muted'}`}>
-          <div className="flex h-[22px] w-[22px] items-center justify-center rounded-md border-2 border-current">
-            <span className="text-sm font-bold leading-none">+</span>
-          </div>
-          <span className="text-[10px] font-display font-semibold tracking-wide">Nouveau</span>
-        </Link>
 
       </div>
     </nav>

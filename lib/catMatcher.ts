@@ -135,10 +135,11 @@ export interface MatchResult {
   confidence: number // 0–1, similarité cosinus du descripteur HSV
 }
 
-// Seuil minimum pour apparaître dans les suggestions (0.68 = ~68% de similarité)
-const THRESHOLD = 0.68
+// Seuil minimum pour apparaître dans les suggestions
+// 0.86 = très strict pour éviter les faux positifs (canapé ≠ chat)
+const THRESHOLD = 0.86
 // Nombre max de suggestions affichées
-const MAX_SUGGESTIONS = 5
+const MAX_SUGGESTIONS = 3
 
 export async function findMatches(
   photoFile: File,

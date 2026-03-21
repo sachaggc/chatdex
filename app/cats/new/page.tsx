@@ -32,7 +32,7 @@ export default function NewCatPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) { setError('Le nom est requis'); return }
+    if (!unnamed && !name.trim()) { setError('Le nom est requis'); return }
     setLoading(true); setError('')
 
     try {
