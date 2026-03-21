@@ -1,12 +1,12 @@
 import imageCompression from 'browser-image-compression'
 
-// Compresse une image à ~200KB max avant upload
+// Compresse une image avant upload
 export async function compressImage(file: File): Promise<File> {
   const options = {
-    maxSizeMB: 1.5,          // 1.5MB max — qualité préservée
-    maxWidthOrHeight: 2048,  // 2048px max
+    maxSizeMB: 0.6,          // 600KB — bon équilibre vitesse/qualité
+    maxWidthOrHeight: 1800,  // 1800px max
     useWebWorker: true,
-    initialQuality: 0.88,    // qualité WebP élevée
+    initialQuality: 0.85,
     fileType: 'image/webp',
   }
   try {
@@ -35,8 +35,12 @@ export async function extractGPS(file: File): Promise<{ lat: number; lng: number
 export async function extractDate(file: File): Promise<Date | null> {
   try {
     const exifr = await import('exifr')
-    const data = await exifr.parse(file, ['DateTimeOriginal'])
-    return data?.DateTimeOriginal ?? null
+    const data = await exifr.parse(file, ['DateTimeOriginal', 'CreateDate', 'DateTime'])
+    const raw = data?.DateTimeOriginal ?? data?.CreateDate ?? data?.DateTime
+    if (!raw) return null
+    // exifr retourne déjà un objet Date pour ces champs
+    if (raw instanceof Date) return raw
+    return null
   } catch {
     return null
   }

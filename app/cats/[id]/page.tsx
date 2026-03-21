@@ -63,6 +63,8 @@ export default function CatDetailPage() {
   const [deleteMode, setDeleteMode]     = useState(false)
   const [editingDate, setEditingDate]   = useState<string | null>(null) // sighting id
   const [editDateVal, setEditDateVal]   = useState('')
+  const [editingStreet, setEditingStreet] = useState<string | null>(null) // sighting id
+  const [editStreetVal, setEditStreetVal] = useState('')
 
   useEffect(() => {
     fetch(`/api/cats/${id}`)
@@ -149,6 +151,17 @@ export default function CatDetailPage() {
     setCat(data)
   }
 
+  async function saveSightingStreet(sightingId: string) {
+    await fetch(`/api/sightings/${sightingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ street: editStreetVal.trim() || null }),
+    })
+    setEditingStreet(null)
+    const data = await fetch(`/api/cats/${id}`).then(r => r.json())
+    setCat(data)
+  }
+
   if (loading) return (
     <div className="min-h-svh flex items-center justify-center">
       <div className="h-6 w-6 rounded-full border-2 border-brand border-t-transparent animate-spin" />
@@ -191,7 +204,7 @@ export default function CatDetailPage() {
           <RarityBadge count={count} />
           {catDef && (
             <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-bold font-display"
-              style={{ color: catDef.color, background: catDef.color + '22', border: `1px solid ${catDef.color}55` }}>
+              style={{ color: '#fff', background: catDef.color, border: 'none' }}>
               {catDef.label}
             </span>
           )}
@@ -351,7 +364,28 @@ export default function CatDetailPage() {
                         </button>
                       </p>
                     )}
-                    {s.street && <p className="text-sm text-text font-medium mt-0.5 flex items-center gap-1"><MapPin size={11} /> {s.street}</p>}
+                    {editingStreet === s.id ? (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <input
+                          type="text"
+                          defaultValue={s.street ?? ''}
+                          onChange={e => setEditStreetVal(e.target.value)}
+                          placeholder="Rue, quartier…"
+                          className="text-xs border border-brand rounded-md px-2 py-1 bg-surface text-text flex-1 min-w-0"
+                          autoFocus
+                        />
+                        <button onClick={() => saveSightingStreet(s.id)} className="text-xs font-bold text-brand shrink-0">OK</button>
+                        <button onClick={() => setEditingStreet(null)} className="text-xs text-muted shrink-0">Annuler</button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-text font-medium mt-0.5 flex items-center gap-1">
+                        <MapPin size={11} />
+                        {s.street ?? <span className="text-muted text-xs italic">Lieu non renseigné</span>}
+                        <button onClick={() => { setEditingStreet(s.id); setEditStreetVal(s.street ?? '') }} className="ml-1 text-border hover:text-muted transition-colors">
+                          <Edit3 size={10} />
+                        </button>
+                      </p>
+                    )}
                     {s.notes && <p className="text-sm text-muted italic mt-0.5">{s.notes}</p>}
                   </div>
                   {s.photo_url && (

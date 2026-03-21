@@ -321,6 +321,7 @@ export default function CapturePage() {
                 </AnimatePresence>
 
                 {/* ── Boutons nouveau / à nommer ─────────────────────────── */}
+                {error && !selectedCat && <p className="text-sm text-red-500 font-medium">{error}</p>}
                 <div className="flex gap-2">
                   <button
                     onClick={() => setStep('new-cat-form')}
@@ -349,13 +350,18 @@ export default function CapturePage() {
                         })
                         awardXp('NEW_CAT', newCat.id)
                         if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', newCat.id)
-                        router.push(`/cats/${newCat.id}/edit`)
+                        // Forcer un rechargement de la galerie (sans cache router)
+                        window.location.href = `/cats/${newCat.id}/edit`
                       } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setLoading(false) }
                     }}
                     disabled={loading}
                     className="flex flex-1 items-center gap-2 rounded-xl border-2 border-dashed border-gold/50 bg-gold/5 p-3 text-gold hover:bg-gold/10 transition-colors font-display font-semibold text-sm disabled:opacity-40"
                   >
-                    <span className="text-lg">?</span> À nommer
+                    {loading ? (
+                      <><div className="h-4 w-4 rounded-full border-2 border-gold border-t-transparent animate-spin" /> Ajout…</>
+                    ) : (
+                      <><span className="text-lg">?</span> À nommer</>
+                    )}
                   </button>
                 </div>
 

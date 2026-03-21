@@ -173,20 +173,18 @@ export default function EditCatPage() {
           {loading ? 'Enregistrement…' : cat.unnamed ? 'Nommer ce chat !' : 'Sauvegarder'}
         </button>
 
-        {/* Supprimer — masqué pour les chats "à nommer" */}
-        {!cat.unnamed && (
-          <button
-            type="button"
-            onClick={async () => {
-              if (!confirm(`Supprimer ${cat.name} définitivement ?`)) return
-              await fetch(`/api/cats/${id}`, { method: 'DELETE' })
-              router.push('/')
-            }}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 py-3 text-sm font-display font-semibold text-red-500 hover:bg-red-50 transition-colors"
-          >
-            <Trash2 size={15} /> Supprimer ce chat
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={async () => {
+            const label = cat.unnamed ? 'ce chat sans nom' : cat.name
+            if (!confirm(`Supprimer ${label} définitivement ?`)) return
+            await fetch(`/api/cats/${id}`, { method: 'DELETE' })
+            window.location.href = '/'
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 py-3 text-sm font-display font-semibold text-red-500 hover:bg-red-50 transition-colors"
+        >
+          <Trash2 size={15} /> Supprimer ce chat
+        </button>
       </form>
     </div>
   )

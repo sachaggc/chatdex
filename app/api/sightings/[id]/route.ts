@@ -36,6 +36,7 @@ export async function PATCH(
   const updates: Record<string, unknown> = {}
   if ('photo_url' in body) updates.photo_url = body.photo_url ?? null
   if ('seen_at'   in body) updates.seen_at   = body.seen_at
+  if ('street'    in body) updates.street    = body.street ?? null
 
   const { data, error } = await supabase
     .from('sightings')
