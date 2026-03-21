@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // Pages qui nécessitent d'être connecté
-const PROTECTED_PAGES = ['/cats/new', '/cats/edit']
+const PROTECTED_PAGES = ['/cats/new', '/capture', '/cats/edit']
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -20,5 +20,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/cats/new', '/cats/edit/:path*'],
+  matcher: ['/cats/new', '/capture', '/cats/edit/:path*'],
 }

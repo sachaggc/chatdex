@@ -1,208 +1,127 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Category } from '@/types'
-import { CATEGORIES } from '@/lib/rarity'
 import ImageUpload from '@/components/ImageUpload'
 import TopBar from '@/components/TopBar'
 
+interface Category { key: string; label: string; color: string }
+
 export default function NewCatPage() {
   const router = useRouter()
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  // Champs du formulaire
-  const [name, setName] = useState('')
+  const [error, setError]     = useState('')
+  const [name, setName]           = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState<Category | ''>('')
+  const [category, setCategory]   = useState('')
   const [traitsInput, setTraitsInput] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [firstSightingGps, setFirstSightingGps] = useState<{ lat: number; lng: number } | null>(null)
-  const [firstSightingDate, setFirstSightingDate] = useState<Date | null>(null)
-  const [street, setStreet] = useState('')
+  const [gps, setGps]             = useState<{ lat: number; lng: number } | null>(null)
+  const [photoDate, setPhotoDate] = useState<Date | null>(null)
+  const [street, setStreet]       = useState('')
 
-  function handleImageReady(file: File, gps: { lat: number; lng: number } | null, date: Date | null) {
-    setPhotoFile(file)
-    setFirstSightingGps(gps)
-    setFirstSightingDate(date)
+  useEffect(() => {
+    fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
+  }, [])
+
+  function handleImageReady(file: File, exifGps: { lat: number; lng: number } | null, date: Date | null) {
+    setPhotoFile(file); setGps(exifGps); setPhotoDate(date)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) { setError('Le nom est requis'); return }
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
 
     try {
       let mainPhotoUrl: string | null = null
-
-      // 1. Upload la photo si présente
       if (photoFile) {
-        const fd = new FormData()
-        fd.append('file', photoFile)
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd })
-        if (!uploadRes.ok) throw new Error('Erreur upload photo')
-        const { url } = await uploadRes.json()
-        mainPhotoUrl = url
+        const fd = new FormData(); fd.append('file', photoFile)
+        const up = await fetch('/api/upload', { method: 'POST', body: fd })
+        if (!up.ok) throw new Error('Erreur upload photo')
+        mainPhotoUrl = (await up.json()).url
       }
 
-      // 2. Crée le chat
-      const traits = traitsInput
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
-
-      const catRes = await fetch('/api/cats', {
+      const traits = traitsInput.split(',').map(t => t.trim()).filter(Boolean)
+      const res = await fetch('/api/cats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || null,
-          category: category || null,
-          character_traits: traits,
-          main_photo_url: mainPhotoUrl,
-        }),
+        body: JSON.stringify({ name: name.trim(), description: description.trim() || null, category: category || null, character_traits: traits, main_photo_url: mainPhotoUrl }),
       })
-      if (!catRes.ok) throw new Error('Erreur création chat')
-      const newCat = await catRes.json()
+      if (!res.ok) throw new Error('Erreur création')
+      const newCat = await res.json()
 
-      // 3. Ajoute la première observation si on a une photo
       if (mainPhotoUrl) {
-        // GPS : depuis EXIF ou depuis navigateur
-        let lat = firstSightingGps?.lat ?? null
-        let lng = firstSightingGps?.lng ?? null
-
+        let lat = gps?.lat ?? null, lng = gps?.lng ?? null
         if (!lat && navigator.geolocation) {
-          const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+          const pos = await new Promise<GeolocationPosition | null>(resolve =>
             navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 5000 })
-          })
+          )
           if (pos) { lat = pos.coords.latitude; lng = pos.coords.longitude }
         }
-
         await fetch('/api/sightings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cat_id: newCat.id,
-            photo_url: mainPhotoUrl,
-            lat, lng,
-            street: street.trim() || null,
-            seen_at: firstSightingDate?.toISOString() ?? new Date().toISOString(),
-          }),
+          body: JSON.stringify({ cat_id: newCat.id, photo_url: mainPhotoUrl, lat, lng, street: street.trim() || null, seen_at: photoDate?.toISOString() ?? new Date().toISOString() }),
         })
       }
-
       router.push(`/cats/${newCat.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue')
+      setError(err instanceof Error ? err.message : 'Erreur')
       setLoading(false)
     }
   }
-
-  const categories = Object.entries(CATEGORIES) as [Category, typeof CATEGORIES[Category]][]
 
   return (
     <div className="min-h-svh pb-10">
       <TopBar backHref="/" title="Nouveau chat" />
 
-      <form onSubmit={handleSubmit} className="px-4 py-4 max-w-lg mx-auto space-y-5">
-
-        {/* Photo principale */}
+      <form onSubmit={handleSubmit} className="px-4 py-5 max-w-lg mx-auto space-y-5">
         <ImageUpload onImageReady={handleImageReady} label="Photo principale" />
 
-        {/* Rue (si on veut préciser la localisation) */}
         <div>
-          <label className="block text-sm font-medium text-dark-brown mb-1">
-            Rue / lieu (optionnel)
-          </label>
-          <input
-            type="text"
-            placeholder="Ex: Rue Tariq Ibn Ziad, Agdal"
-            value={street}
-            onChange={(e) => setStreet(e.target.value)}
-            className="input-moroccan"
-          />
+          <label className="block text-sm font-semibold text-text mb-1">Rue / lieu (optionnel)</label>
+          <input type="text" placeholder="Ex: Rue Tariq Ibn Ziad, Agdal" value={street} onChange={e => setStreet(e.target.value)} className="input-field" />
         </div>
 
-        {/* Nom */}
         <div>
-          <label className="block text-sm font-medium text-dark-brown mb-1">
-            Nom du chat *
-          </label>
-          <input
-            type="text"
-            placeholder="Ex: Le Gros Roux, Whiskers..."
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="input-moroccan"
-            required
-          />
+          <label className="block text-sm font-semibold text-text mb-1">Nom du chat <span className="text-brand">*</span></label>
+          <input type="text" placeholder="Ex: Le Gros Roux, Whiskers…" value={name} onChange={e => setName(e.target.value)} className="input-field" required />
         </div>
 
-        {/* Catégorie */}
         <div>
-          <label className="block text-sm font-medium text-dark-brown mb-2">
-            Catégorie
-          </label>
+          <label className="block text-sm font-semibold text-text mb-2">Catégorie</label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {categories.map(([key, cat]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setCategory(category === key ? '' : key)}
-                className={`rounded-xl border-2 px-3 py-2.5 text-sm font-medium transition-all text-left ${
-                  category === key
-                    ? 'border-current text-white'
-                    : 'border-gray-200 bg-white text-gray-600'
-                }`}
-                style={category === key ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
-              >
-                {cat.emoji} {cat.label}
+            {categories.map(c => (
+              <button key={c.key} type="button" onClick={() => setCategory(category === c.key ? '' : c.key)}
+                className="rounded-xl border-2 px-3 py-2.5 text-sm font-display font-semibold text-left transition-all"
+                style={category === c.key
+                  ? { background: c.color, borderColor: c.color, color: 'white' }
+                  : { borderColor: '#DFC9AE', color: '#7A6352' }
+                }>
+                {c.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-dark-brown mb-1">
-            Description (optionnel)
-          </label>
-          <textarea
-            placeholder="Décris ce chat en quelques mots..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="input-moroccan resize-none"
-          />
+          <label className="block text-sm font-semibold text-text mb-1">Description (optionnel)</label>
+          <textarea placeholder="Décris ce chat en quelques mots…" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="input-field resize-none" />
         </div>
 
-        {/* Traits de caractère */}
         <div>
-          <label className="block text-sm font-medium text-dark-brown mb-1">
-            Traits de caractère (séparés par des virgules)
+          <label className="block text-sm font-semibold text-text mb-1">
+            Traits de caractère <span className="text-muted font-normal">(séparés par des virgules)</span>
           </label>
-          <input
-            type="text"
-            placeholder="Ex: joueur, méfiant, câlin"
-            value={traitsInput}
-            onChange={(e) => setTraitsInput(e.target.value)}
-            className="input-moroccan"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Appuie sur virgule pour séparer les traits.
-          </p>
+          <input type="text" placeholder="Ex: joueur, méfiant, câlin" value={traitsInput} onChange={e => setTraitsInput(e.target.value)} className="input-field" />
         </div>
 
-        {error && (
-          <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+        {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
-        <button type="submit" disabled={loading} className="btn-primary w-full text-base disabled:opacity-50">
-          {loading ? 'Enregistrement...' : '✨ Ajouter ce chat'}
+        <button type="submit" disabled={loading} className="btn-primary w-full">
+          {loading ? 'Enregistrement…' : 'Ajouter ce chat'}
         </button>
       </form>
     </div>

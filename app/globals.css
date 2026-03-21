@@ -1,166 +1,181 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Palette Pokédex Marocain */
-  --color-terracotta: #C65D3C;
-  --color-terracotta-light: #E07A5F;
-  --color-terracotta-dark: #A04830;
-  --color-saffron: #E8A020;
-  --color-saffron-light: #F5C842;
-  --color-blue-maroc: #4A7FA5;
-  --color-blue-maroc-dark: #2E5F80;
-  --color-cream: #FBF0E3;
-  --color-parchment: #F5E6D3;
-  --color-dark-brown: #2C1810;
-  --color-sage: #4A7C59;
+  /* ── Palette Pokédex Marocain Futuriste ── */
+  --color-brand:        #C34B32;
+  --color-brand-light:  #D96B50;
+  --color-brand-dark:   #9E3825;
+  --color-gold:         #C98A2F;
+  --color-gold-light:   #E4AA4A;
+  --color-navy:         #1B2D4A;
+  --color-teal:         #2D7A75;
+  --color-cream:        #F2E8D9;
+  --color-parchment:    #E8D8C4;
+  --color-surface:      #FDFAF6;
+  --color-border:       #DFC9AE;
+  --color-text:         #1A1007;
+  --color-muted:        #7A6352;
 
-  --font-sans: var(--font-body);
-  --font-display: var(--font-display);
+  /* Rareté */
+  --color-shiny:        #C98A2F;
+  --color-legendary:    #7C3AED;
+  --color-ultra:        #1D4ED8;
+  --color-rare:         #15803D;
+  --color-uncommon:     #6B7280;
+  --color-common:       #9CA3AF;
+
+  --font-display: var(--font-syne);
+  --font-sans:    var(--font-dm);
 }
 
-/* Variables CSS globales */
 :root {
-  --background: #FBF0E3;
-  --foreground: #2C1810;
+  color-scheme: light;
 }
 
-html {
-  background: var(--background);
-  color: var(--foreground);
-}
+* { box-sizing: border-box; }
 
 body {
-  font-family: 'Tajawal', system-ui, sans-serif;
-  background: var(--background);
-  color: var(--foreground);
-  min-height: 100svh;
+  background: #F2E8D9;
+  color: #1A1007;
+  font-family: var(--font-dm, 'DM Sans', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #F5E6D3; }
-::-webkit-scrollbar-thumb { background: #C65D3C; border-radius: 3px; }
+/* ── Utilitaires ─────────────────────────────────────────── */
+.font-display { font-family: var(--font-syne, 'Syne', sans-serif); }
 
-/* ── Carte chat style Pokédex ────────────────────────────── */
+/* ── Carte chat (style carte postale marocaine) ─────────── */
 .cat-card {
-  position: relative;
-  border-radius: 16px;
+  background: #FDFAF6;
+  border-radius: 14px;
   overflow: hidden;
-  border: 2px solid rgba(198, 93, 60, 0.2);
-  background: white;
-  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1.5px solid #DFC9AE;
+  box-shadow: 0 2px 8px rgba(26, 16, 7, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
   cursor: pointer;
+  position: relative;
+}
+.cat-card:hover, .cat-card:active {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(26, 16, 7, 0.12);
 }
 
-.cat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(44, 24, 16, 0.15);
-}
-
-/* Motif zellige en fond des cartes */
-.zellige-bg {
-  background-color: #FBF0E3;
-  background-image:
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 8px,
-      rgba(198, 93, 60, 0.04) 8px,
-      rgba(198, 93, 60, 0.04) 9px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 8px,
-      rgba(198, 93, 60, 0.04) 8px,
-      rgba(198, 93, 60, 0.04) 9px
-    );
-}
-
-/* ── Effet Shiny ✨ ─────────────────────────────────────── */
+/* Effet shiny */
 .shiny-card {
-  background: linear-gradient(
-    135deg,
-    #fff9e6 0%,
-    #ffd700 25%,
-    #fff0a0 50%,
-    #ffd700 75%,
-    #fff9e6 100%
-  );
-  background-size: 300% 300%;
-  animation: shiny-shimmer 4s ease infinite;
-  border: 2px solid #FFD700 !important;
+  border-color: #C98A2F !important;
+  box-shadow: 0 0 0 1px #C98A2F44, 0 4px 20px rgba(201, 138, 47, 0.25) !important;
+}
+.shiny-shimmer {
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFF0B0 40%, #FFF9E6 60%, #FFE070 100%);
+  background-size: 300%;
+  animation: shimmer 3s linear infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
-@keyframes shiny-shimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* ── Motif zellige (léger, moderne) ─────────────────────── */
+.zellige-bg {
+  background-color: #F2E8D9;
+  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23C34B32' fill-opacity='0.04'%3E%3Cpolygon points='10,0 20,10 10,20 0,10'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-.shiny-glow {
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.2);
-}
-
-/* ── Bordure de carte marocaine ─────────────────────────── */
-.card-border-moroccan {
-  border-image: none;
-  box-shadow:
-    inset 0 0 0 2px rgba(198, 93, 60, 0.3),
-    inset 0 0 0 4px rgba(232, 160, 32, 0.15);
-}
-
-/* ── Navigation bas (mobile) ─────────────────────────────── */
+/* ── Navigation bas ──────────────────────────────────────── */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid rgba(198, 93, 60, 0.2);
+  bottom: 0; left: 0; right: 0;
+  background: #FDFAF6;
+  border-top: 1px solid #DFC9AE;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
+  backdrop-filter: blur(12px);
 }
 
-/* ── Bouton principal ────────────────────────────────────── */
+/* ── Inputs ──────────────────────────────────────────────── */
+.input-field {
+  width: 100%;
+  background: #FDFAF6;
+  border: 1.5px solid #DFC9AE;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 16px;
+  color: #1A1007;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-field::placeholder { color: #7A6352; opacity: 0.6; }
+.input-field:focus { border-color: #C34B32; }
+
+/* ── Boutons ─────────────────────────────────────────────── */
 .btn-primary {
-  background: #C65D3C;
+  background: #C34B32;
   color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-syne, inherit);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+.btn-primary:hover  { background: #9E3825; }
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent;
+  color: #C34B32;
+  border: 1.5px solid #C34B32;
   border-radius: 12px;
   padding: 12px 24px;
+  font-size: 15px;
   font-weight: 600;
-  transition: background 0.2s, transform 0.1s;
-  border: none;
+  font-family: var(--font-syne, inherit);
   cursor: pointer;
+  transition: background 0.15s;
 }
+.btn-secondary:hover { background: #C34B3210; }
 
-.btn-primary:hover {
-  background: #A04830;
-  transform: scale(1.02);
-}
-
-.btn-primary:active {
-  transform: scale(0.98);
-}
-
-/* ── Input style ─────────────────────────────────────────── */
-.input-moroccan {
+/* ── Stamp rareté (coin carte) ───────────────────────────── */
+.rarity-stamp {
+  position: absolute;
+  top: 8px; right: 8px;
   background: white;
-  border: 2px solid rgba(198, 93, 60, 0.3);
-  border-radius: 10px;
-  padding: 10px 14px;
-  width: 100%;
-  font-size: 16px; /* Important : évite le zoom sur iOS */
-  transition: border-color 0.2s;
-  outline: none;
+  border-radius: 6px;
+  padding: 4px 7px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-syne, inherit);
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  border: 1px solid currentColor;
 }
 
-.input-moroccan:focus {
-  border-color: #C65D3C;
-}
+/* ── Carte Leaflet ───────────────────────────────────────── */
+.leaflet-container { border-radius: 12px; }
 
-/* ── Leaflet fixes ───────────────────────────────────────── */
-.leaflet-container {
-  border-radius: 12px;
-  z-index: 0;
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #DFC9AE; border-radius: 4px; }
+
+/* ── Lignes postale (décoratives) ────────────────────────── */
+.postcard-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+}
+.postcard-lines span {
+  display: block;
+  height: 1px;
+  background: #DFC9AE;
+  border-radius: 1px;
 }

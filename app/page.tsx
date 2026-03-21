@@ -1,106 +1,124 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { Cat, Category } from '@/types'
-import { CATEGORIES } from '@/lib/rarity'
+import { Search, SlidersHorizontal } from 'lucide-react'
+import { Cat } from '@/types'
 import CatCard from '@/components/CatCard'
 import BottomNav from '@/components/BottomNav'
 import TopBar from '@/components/TopBar'
 
+interface Category { key: string; label: string; color: string }
+
 export default function GalleriePage() {
-  const [cats, setCats] = useState<Cat[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all')
+  const [cats, setCats]       = useState<Cat[]>([])
+  const [cats_loading, setLoading] = useState(true)
+  const [search, setSearch]   = useState('')
+  const [filter, setFilter]   = useState<string>('all')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
-    fetch('/api/cats')
-      .then((r) => r.json())
-      .then((data) => { setCats(data); setLoading(false) })
-      .catch(() => setLoading(false))
+    fetch('/api/cats').then(r => r.json()).then(d => { setCats(d); setLoading(false) }).catch(() => setLoading(false))
+    fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
   }, [])
 
-  const filtered = useMemo(() => {
-    return cats.filter((cat) => {
-      const matchSearch = cat.name.toLowerCase().includes(search.toLowerCase())
-      const matchCategory = filterCategory === 'all' || cat.category === filterCategory
-      return matchSearch && matchCategory
-    })
-  }, [cats, search, filterCategory])
-
-  const categories = Object.entries(CATEGORIES) as [Category, typeof CATEGORIES[Category]][]
+  const filtered = useMemo(() => cats.filter(c => {
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase())
+    const matchCat    = filter === 'all' || c.category === filter
+    return matchSearch && matchCat
+  }), [cats, search, filter])
 
   return (
     <div className="min-h-svh pb-24">
       <TopBar />
 
-      {/* Header décoratif */}
-      <div className="bg-terracotta text-cream px-4 pt-4 pb-6">
-        <p className="text-sm opacity-80">المغرب · Rabat</p>
-        <h1 className="text-2xl font-bold mt-1">
-          {cats.length} chats recensés
+      {/* Hero */}
+      <div className="bg-navy px-4 pt-5 pb-7 relative overflow-hidden">
+        {/* Motif géométrique de fond */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='white'%3E%3Cpolygon points='20,0 40,20 20,40 0,20'/%3E%3C/g%3E%3C/svg%3E")`
+        }} />
+
+        <p className="text-gold font-display font-semibold text-xs tracking-widest uppercase mb-1">
+          المغرب · Rabat
+        </p>
+        <h1 className="font-display font-bold text-white text-2xl">
+          {cats_loading ? '—' : cats.length} chats recensés
         </h1>
 
-        {/* Barre de recherche */}
-        <div className="mt-3 relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cream/60">🔍</span>
-          <input
-            type="search"
-            placeholder="Rechercher un chat..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/20 text-cream placeholder-cream/60 border border-white/20 focus:outline-none focus:bg-white/30 text-base"
-          />
+        {/* Searchbar */}
+        <div className="mt-4 flex gap-2">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <input
+              type="search"
+              placeholder="Rechercher..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/40 border border-white/15 text-base focus:outline-none focus:bg-white/15"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center justify-center w-11 rounded-xl border transition-colors ${
+              filter !== 'all' ? 'bg-gold border-gold text-navy' : 'bg-white/10 border-white/15 text-white'
+            }`}
+          >
+            <SlidersHorizontal size={16} />
+          </button>
         </div>
       </div>
 
-      {/* Filtres catégories */}
-      <div className="px-4 py-3 flex gap-2 overflow-x-auto">
-        <button
-          onClick={() => setFilterCategory('all')}
-          className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
-            filterCategory === 'all'
-              ? 'bg-terracotta text-white border-terracotta'
-              : 'bg-white text-gray-600 border-gray-200'
-          }`}
-        >
-          Tous
-        </button>
-        {categories.map(([key, cat]) => (
+      {/* Filtres */}
+      {showFilters && (
+        <div className="px-4 py-3 bg-surface border-b border-border flex gap-2 overflow-x-auto">
           <button
-            key={key}
-            onClick={() => setFilterCategory(key)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
-              filterCategory === key ? 'text-white border-transparent' : 'bg-white text-gray-600 border-gray-200'
+            onClick={() => setFilter('all')}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-display font-bold border transition-colors ${
+              filter === 'all' ? 'bg-navy text-white border-navy' : 'bg-surface text-muted border-border'
             }`}
-            style={filterCategory === key ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
           >
-            {cat.emoji} {cat.label}
+            Tous
           </button>
-        ))}
-      </div>
+          {categories.map(c => (
+            <button
+              key={c.key}
+              onClick={() => setFilter(c.key)}
+              className="shrink-0 rounded-full px-3 py-1.5 text-xs font-display font-bold border transition-colors"
+              style={filter === c.key
+                ? { background: c.color, color: 'white', borderColor: c.color }
+                : { background: 'transparent', color: c.color, borderColor: c.color + '55' }
+              }
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Grille */}
-      <div className="px-4">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
-            <span className="text-4xl animate-bounce">🐱</span>
-            <p>Chargement des chats...</p>
+      <div className="px-4 pt-4">
+        {cats_loading ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl bg-surface border border-border animate-pulse aspect-[3/4]" />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
-            <span className="text-5xl">🐾</span>
-            <p className="text-center">
-              {search || filterCategory !== 'all'
-                ? 'Aucun chat ne correspond à ta recherche'
-                : 'Aucun chat encore. Ajoutes-en un !'}
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted">
+            <svg viewBox="0 0 60 60" className="w-16 h-16 fill-current opacity-20">
+              <ellipse cx="30" cy="36" rx="22" ry="18"/>
+              <ellipse cx="30" cy="24" rx="14" ry="13"/>
+              <polygon points="16,16 10,4 22,10"/>
+              <polygon points="44,16 38,10 50,4"/>
+            </svg>
+            <p className="font-display font-semibold text-center">
+              {search || filter !== 'all' ? 'Aucun résultat' : 'Aucun chat encore.\nAjoutes-en un !'}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {filtered.map((cat) => (
-              <CatCard key={cat.id} cat={cat} />
-            ))}
+            {filtered.map(cat => <CatCard key={cat.id} cat={cat} />)}
           </div>
         )}
       </div>

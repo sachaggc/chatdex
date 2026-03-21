@@ -21,6 +21,13 @@ export async function POST(request: NextRequest) {
   return response
 }
 
+// GET — vérifie si l'utilisateur est connecté
+export async function GET(request: NextRequest) {
+  const auth = request.cookies.get('chatdex_auth')
+  if (auth?.value === '1') return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: false }, { status: 401 })
+}
+
 export async function DELETE() {
   const response = NextResponse.json({ ok: true })
   response.cookies.delete('chatdex_auth')
