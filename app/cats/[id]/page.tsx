@@ -1,12 +1,12 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Eye, Camera, MapPin, Edit3, X } from 'lucide-react'
-import { CatWithSightings } from '@/types'
+import { Eye, Camera, MapPin, Edit3, X, Clock, BarChart2, GitMerge } from 'lucide-react'
+import { CatWithSightings, Sighting } from '@/types'
 import { getRarity, DEFAULT_CATEGORIES } from '@/lib/rarity'
 import RarityBadge from '@/components/RarityBadge'
 import TopBar from '@/components/TopBar'
@@ -17,6 +17,34 @@ const CatMap = dynamic(() => import('@/components/CatMap'), {
   loading: () => <div className="h-48 bg-parchment rounded-xl animate-pulse" />,
 })
 
+// ── Calcul des stats ─────────────────────────────────────────
+function computeStats(sightings: Sighting[]) {
+  if (sightings.length === 0) return null
+
+  const hours = sightings.map(s => new Date(s.seen_at).getHours())
+  const avgHour = Math.round(hours.reduce((a, b) => a + b, 0) / hours.length)
+  const period =
+    avgHour >= 5  && avgHour < 12 ? 'Matin'       :
+    avgHour >= 12 && avgHour < 18 ? 'Après-midi'  :
+    avgHour >= 18 && avgHour < 22 ? 'Soir'        : 'Nuit'
+
+  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+  const dayCounts = sightings.reduce((acc, s) => {
+    const d = new Date(s.seen_at).getDay()
+    acc[d] = (acc[d] ?? 0) + 1
+    return acc
+  }, {} as Record<number, number>)
+  const topDayIdx = Number(Object.entries(dayCounts).sort(([,a],[,b]) => b - a)[0]?.[0] ?? 1)
+
+  const streetCounts = sightings.filter(s => s.street).reduce((acc, s) => {
+    acc[s.street!] = (acc[s.street!] ?? 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+  const topStreets = Object.entries(streetCounts).sort(([,a],[,b]) => b - a).slice(0, 2)
+
+  return { avgHour, period, topDay: dayNames[topDayIdx], topStreets }
+}
+
 export default function CatDetailPage() {
   const { id }   = useParams<{ id: string }>()
   const router   = useRouter()
@@ -25,6 +53,10 @@ export default function CatDetailPage() {
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [quickLoading, setQuickLoading] = useState(false)
   const [quickDone, setQuickDone]       = useState(false)
+  const [showMerge, setShowMerge]       = useState(false)
+  const [allCats, setAllCats]           = useState<{id:string;name:string}[]>([])
+  const [mergeTarget, setMergeTarget]   = useState('')
+  const [mergeLoading, setMergeLoading] = useState(false)
 
   useEffect(() => {
     fetch(`/api/cats/${id}`)
@@ -32,6 +64,8 @@ export default function CatDetailPage() {
       .then(d => { setCat(d); setLoading(false) })
       .catch(() => { setLoading(false); router.push('/') })
   }, [id, router])
+
+  const stats = useMemo(() => cat ? computeStats(cat.sightings) : null, [cat])
 
   async function quickSighting() {
     setQuickLoading(true)
@@ -56,6 +90,25 @@ export default function CatDetailPage() {
     finally { setQuickLoading(false) }
   }
 
+  async function startMerge() {
+    const data = await fetch('/api/cats').then(r => r.json())
+    setAllCats(data.filter((c: {id:string}) => c.id !== id))
+    setShowMerge(true)
+  }
+
+  async function doMerge() {
+    if (!mergeTarget) return
+    if (!confirm('Fusionner les deux chats ? Cette action est irréversible.')) return
+    setMergeLoading(true)
+    const res = await fetch('/api/cats/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_id: id, target_id: mergeTarget }),
+    })
+    if (res.ok) router.push(`/cats/${mergeTarget}`)
+    else setMergeLoading(false)
+  }
+
   if (loading) return (
     <div className="min-h-svh flex items-center justify-center">
       <div className="h-6 w-6 rounded-full border-2 border-brand border-t-transparent animate-spin" />
@@ -63,10 +116,10 @@ export default function CatDetailPage() {
   )
   if (!cat) return null
 
-  const count    = cat.sightings_count ?? cat.sightings.length
-  const rarity   = getRarity(count)
-  const catDef   = cat.category ? DEFAULT_CATEGORIES[cat.category] : null
-  const photos   = cat.sightings.filter(s => s.photo_url).map(s => s.photo_url!)
+  const count  = cat.sightings_count ?? cat.sightings.length
+  const rarity = getRarity(count)
+  const catDef = cat.category ? DEFAULT_CATEGORIES[cat.category] : null
+  const photos = cat.sightings.filter(s => s.photo_url).map(s => s.photo_url!)
 
   return (
     <div className="min-h-svh pb-24">
@@ -81,27 +134,19 @@ export default function CatDetailPage() {
       />
 
       {/* Photo principale */}
-      <div
-        className="relative bg-parchment zellige-bg"
-        style={{ height: 280 }}
-        onClick={() => cat.main_photo_url && setLightbox(cat.main_photo_url)}
-      >
+      <div className="relative bg-parchment zellige-bg" style={{ height: 280 }}
+        onClick={() => cat.main_photo_url && setLightbox(cat.main_photo_url)}>
         {cat.main_photo_url
           ? <Image src={cat.main_photo_url} alt={cat.name} fill className="object-contain cursor-pointer" priority />
           : <div className="flex h-full items-center justify-center opacity-10">
               <svg viewBox="0 0 60 60" className="w-24 h-24 fill-text">
-                <ellipse cx="30" cy="36" rx="22" ry="18"/>
-                <ellipse cx="30" cy="24" rx="14" ry="13"/>
-                <polygon points="16,16 10,4 22,10"/>
-                <polygon points="44,16 38,10 50,4"/>
+                <ellipse cx="30" cy="36" rx="22" ry="18"/><ellipse cx="30" cy="24" rx="14" ry="13"/>
+                <polygon points="16,16 10,4 22,10"/><polygon points="44,16 38,10 50,4"/>
               </svg>
             </div>
         }
-        {/* Bande catégorie */}
         <div className="absolute top-0 inset-x-0 h-1" style={{ background: catDef?.color ?? '#DFC9AE' }} />
-        {/* Dégradé bas */}
         <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-t from-black/30 to-transparent" />
-        {/* Badges */}
         <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
           <RarityBadge count={count} />
           {catDef && (
@@ -130,30 +175,60 @@ export default function CatDetailPage() {
             <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2">Caractère</p>
             <div className="flex flex-wrap gap-2">
               {cat.character_traits.map(t => (
-                <span key={t} className="rounded-lg bg-surface border border-border px-3 py-1 text-sm text-text font-medium">
-                  {t}
-                </span>
+                <span key={t} className="rounded-lg bg-surface border border-border px-3 py-1 text-sm text-text font-medium">{t}</span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stats automatiques */}
+        {stats && count >= 2 && (
+          <div>
+            <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <BarChart2 size={12} /> Stats
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-surface border border-border p-3">
+                <p className="text-xs text-muted font-medium">Heure habituelle</p>
+                <p className="font-display font-bold text-text mt-1 flex items-center gap-1">
+                  <Clock size={13} className="text-brand" />
+                  {String(stats.avgHour).padStart(2,'0')}h · {stats.period}
+                </p>
+              </div>
+              <div className="rounded-xl bg-surface border border-border p-3">
+                <p className="text-xs text-muted font-medium">Jour le + fréquent</p>
+                <p className="font-display font-bold text-text mt-1">{stats.topDay}</p>
+              </div>
+              {stats.topStreets.length > 0 && (
+                <div className="col-span-2 rounded-xl bg-surface border border-border p-3">
+                  <p className="text-xs text-muted font-medium mb-1.5 flex items-center gap-1">
+                    <MapPin size={11} /> Spots fréquents
+                  </p>
+                  <div className="space-y-1">
+                    {stats.topStreets.map(([street, count]) => (
+                      <div key={street} className="flex items-center justify-between">
+                        <span className="text-sm text-text font-medium truncate">{street}</span>
+                        <span className="text-xs text-muted ml-2 shrink-0">{count}×</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={quickSighting}
-            disabled={quickLoading}
+          <button onClick={quickSighting} disabled={quickLoading}
             className={`flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-display font-bold transition-all ${
               quickDone ? 'border-teal bg-teal/10 text-teal' : 'border-border bg-surface text-text hover:border-brand/40'
-            } disabled:opacity-50`}
-          >
+            } disabled:opacity-50`}>
             <Eye size={16} />
             {quickDone ? 'Enregistré !' : quickLoading ? 'Localisation…' : 'Juste vu !'}
           </button>
-          <Link
-            href={`/cats/${id}/observe`}
-            className="flex items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-display font-bold text-white"
-          >
+          <Link href={`/cats/${id}/observe`}
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-display font-bold text-white">
             <Camera size={16} /> Ajouter une photo
           </Link>
         </div>
@@ -161,9 +236,7 @@ export default function CatDetailPage() {
         {/* Galerie */}
         {photos.length > 0 && (
           <div>
-            <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2">
-              Galerie · {photos.length} photos
-            </p>
+            <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2">Galerie · {photos.length} photos</p>
             <div className="grid grid-cols-3 gap-1.5">
               {photos.map((url, i) => (
                 <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-parchment cursor-pointer" onClick={() => setLightbox(url)}>
@@ -198,7 +271,7 @@ export default function CatDetailPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted">
-                      {new Date(s.seen_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {new Date(s.seen_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                       {' · '}
                       {new Date(s.seen_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -215,6 +288,32 @@ export default function CatDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Fusionner */}
+        <div className="pb-4">
+          {!showMerge ? (
+            <button onClick={startMerge} className="flex items-center gap-1.5 text-xs text-muted hover:text-text transition-colors font-semibold">
+              <GitMerge size={13} /> Fusionner avec un autre chat (doublon)
+            </button>
+          ) : (
+            <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+              <p className="font-display font-semibold text-sm text-text">Fusionner avec…</p>
+              <p className="text-xs text-muted">Toutes les observations de <strong>{cat.name}</strong> seront transférées vers le chat choisi, puis ce profil sera supprimé.</p>
+              <select value={mergeTarget} onChange={e => setMergeTarget(e.target.value)} className="input-field">
+                <option value="">Choisir un chat…</option>
+                {allCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <div className="flex gap-2">
+                <button onClick={() => setShowMerge(false)} className="btn-secondary flex-1 py-2.5 text-sm">Annuler</button>
+                <button onClick={doMerge} disabled={!mergeTarget || mergeLoading}
+                  className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-display font-bold text-white disabled:opacity-40">
+                  {mergeLoading ? 'Fusion…' : 'Fusionner'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* Lightbox */}
