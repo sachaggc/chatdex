@@ -4,20 +4,26 @@ import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Flame, Crown, RefreshCw, Swords, TrendingUp } from 'lucide-react'
+import { Flame, Crown, RefreshCw, Swords, TrendingUp, Zap, Plus, RotateCcw, ChevronDown } from 'lucide-react'
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
 import { Cat } from '@/types'
 
 interface AuraEntry { id: string; name: string; main_photo_url: string | null; aura_score: number }
-interface Duel { winner_id: string; loser_id: string; created_at: string }
+interface Duel { winner_id: string; loser_id: string; created_at: string; action_name?: string; aura_delta?: number }
 
-const BASE_ELO = 1000
+interface PresetAction {
+  id: string; name: string; aura_points: number; emoji: string; note: string; is_preset: boolean
+}
+interface CustomAction {
+  id: string; name: string; aura_points: number; emoji: string; is_preset: boolean
+}
+
+const BASE_AURA = 1000
 
 function pickTwo(cats: Cat[], lastPair: string[]): [Cat, Cat] | null {
   const eligible = cats.filter(c => c.main_photo_url)
   if (eligible.length < 2) return null
-  // Évite de reproposer la même paire
   const pool = eligible.filter(c => !lastPair.includes(c.id))
   const a = pool.length >= 2 ? pool : eligible
   const shuffled = [...a].sort(() => Math.random() - 0.5)
@@ -31,9 +37,23 @@ export default function AuraPage() {
   const [leaderboard, setLeaderboard] = useState<AuraEntry[]>([])
   const [recentDuels, setRecentDuels] = useState<Duel[]>([])
   const [voted, setVoted]             = useState<string | null>(null)
-  const [eloChange, setEloChange]     = useState<{ winner: number; loser: number } | null>(null)
+  const [auraChange, setAuraChange]   = useState<{ winner: number; loser: number } | null>(null)
   const [loading, setLoading]         = useState(false)
-  const [tab, setTab]                 = useState<'duel' | 'classement'>('duel')
+  const [tab, setTab]                 = useState<'duel' | 'classement' | 'actions'>('duel')
+
+  // Actions
+  const [presets, setPresets]       = useState<PresetAction[]>([])
+  const [custom, setCustom]         = useState<CustomAction[]>([])
+  const [selectedCatId, setSelectedCatId] = useState('')
+  const [selectedAction, setSelectedAction] = useState<PresetAction | CustomAction | null>(null)
+  const [applyLoading, setApplyLoading] = useState(false)
+  const [applyResult, setApplyResult] = useState<{ cat_name: string; new_score: number; delta: number } | null>(null)
+  const [showNewAction, setShowNewAction] = useState(false)
+  const [newActionName, setNewActionName] = useState('')
+  const [newActionPts, setNewActionPts]   = useState(10)
+  const [newActionEmoji, setNewActionEmoji] = useState('⚡')
+  const [isAuth, setIsAuth] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
 
   const loadLeaderboard = useCallback(() => {
     fetch('/api/aura').then(r => r.json()).then(({ leaderboard, recentDuels }) => {
@@ -49,6 +69,11 @@ export default function AuraPage() {
       setPair(pickTwo(named, []))
     }).catch(() => {})
     loadLeaderboard()
+    fetch('/api/aura/actions').then(r => r.json()).then(({ presets, custom }) => {
+      setPresets(presets ?? [])
+      setCustom(custom ?? [])
+    }).catch(() => {})
+    fetch('/api/auth').then(r => setIsAuth(r.ok)).catch(() => {})
   }, [loadLeaderboard])
 
   function nextPair(currentPair?: [Cat, Cat]) {
@@ -56,7 +81,7 @@ export default function AuraPage() {
     const ids = p ? [p[0].id, p[1].id] : []
     setLastPair(ids)
     setVoted(null)
-    setEloChange(null)
+    setAuraChange(null)
     setPair(pickTwo(cats, ids))
   }
 
@@ -72,15 +97,68 @@ export default function AuraPage() {
       })
       if (res.ok) {
         const { winner_elo, loser_elo } = await res.json()
-        setEloChange({ winner: winner_elo, loser: loser_elo })
+        setAuraChange({ winner: winner_elo, loser: loser_elo })
         loadLeaderboard()
       }
     } catch { /* ignore */ }
     finally { setLoading(false) }
   }
 
-  const maxElo = Math.max(...leaderboard.map(c => c.aura_score), BASE_ELO)
+  async function applyAction() {
+    if (!selectedCatId || !selectedAction) return
+    setApplyLoading(true); setApplyResult(null)
+    try {
+      const res = await fetch('/api/aura/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cat_id: selectedCatId,
+          action_name: selectedAction.name,
+          aura_points: selectedAction.aura_points,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setApplyResult(data)
+        loadLeaderboard()
+        if (navigator.vibrate) navigator.vibrate([20, 10, 40, 10, 80])
+        setTimeout(() => { setApplyResult(null); setSelectedAction(null) }, 4000)
+      }
+    } catch { /* ignore */ }
+    finally { setApplyLoading(false) }
+  }
+
+  async function createAction() {
+    if (!newActionName.trim()) return
+    const res = await fetch('/api/aura/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newActionName.trim(), aura_points: newActionPts, emoji: newActionEmoji }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setCustom(prev => [data, ...prev])
+      setShowNewAction(false)
+      setNewActionName(''); setNewActionPts(10); setNewActionEmoji('⚡')
+    }
+  }
+
+  async function resetAura() {
+    if (!confirm('Remettre TOUS les scores à 1000 et effacer l\'historique des duels ?')) return
+    setResetLoading(true)
+    try {
+      await fetch('/api/aura/reset', { method: 'POST' })
+      loadLeaderboard()
+    } finally { setResetLoading(false) }
+  }
+
+  const maxAura = Math.max(...leaderboard.map(c => c.aura_score), BASE_AURA)
   const catMap = Object.fromEntries(cats.map(c => [c.id, c]))
+
+  const allActions = [
+    ...presets,
+    ...custom,
+  ]
 
   return (
     <div className="min-h-svh pb-24">
@@ -93,12 +171,12 @@ export default function AuraPage() {
       {/* Onglets */}
       <div className="sticky top-14 z-30 bg-cream/90 backdrop-blur-md border-b border-border">
         <div className="flex max-w-lg mx-auto">
-          {(['duel', 'classement'] as const).map(t => (
+          {(['duel', 'classement', 'actions'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 py-3 text-sm font-display font-bold transition-colors ${
                 tab === t ? 'text-brand border-b-2 border-brand' : 'text-muted'
               }`}>
-              {t === 'duel' ? '⚔️ Duel' : '👑 Classement'}
+              {t === 'duel' ? '⚔️ Duel' : t === 'classement' ? '👑 Classement' : '⚡ Actions'}
             </button>
           ))}
         </div>
@@ -117,11 +195,11 @@ export default function AuraPage() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   {pair.map((cat, idx) => {
-                    const other = pair[idx === 0 ? 1 : 0]
+                    const other   = pair[idx === 0 ? 1 : 0]
                     const isWinner = voted === cat.id
                     const isLoser  = voted === other.id
-                    const catElo   = leaderboard.find(c => c.id === cat.id)?.aura_score ?? BASE_ELO
-                    const newElo   = isWinner ? eloChange?.winner : isLoser ? eloChange?.loser : null
+                    const catAura  = leaderboard.find(c => c.id === cat.id)?.aura_score ?? BASE_AURA
+                    const newAura  = isWinner ? auraChange?.winner : isLoser ? auraChange?.loser : null
 
                     return (
                       <motion.button
@@ -157,12 +235,12 @@ export default function AuraPage() {
                           <p className="font-display font-bold text-sm text-text truncate">{cat.name}</p>
                           <div className="flex items-center gap-1 mt-0.5">
                             <TrendingUp size={10} className="text-muted shrink-0" />
-                            {newElo ? (
+                            {newAura ? (
                               <span className={`text-xs font-bold ${isWinner ? 'text-green-500' : 'text-red-400'}`}>
-                                {isWinner ? '+' : ''}{newElo - catElo} → {newElo}
+                                {isWinner ? '+' : ''}{newAura - catAura} → {newAura} pts
                               </span>
                             ) : (
-                              <span className="text-xs text-muted tabular-nums">{catElo} ELO</span>
+                              <span className="text-xs text-muted tabular-nums">{catAura} pts</span>
                             )}
                           </div>
                         </div>
@@ -193,14 +271,14 @@ export default function AuraPage() {
             )}
 
             {/* Derniers duels */}
-            {recentDuels.length > 0 && (
+            {recentDuels.filter(d => !d.action_name || d.winner_id !== d.loser_id).length > 0 && (
               <div>
                 <p className="text-xs font-display font-bold text-muted uppercase tracking-wide mb-2">Derniers duels</p>
                 <div className="space-y-1.5">
-                  {recentDuels.slice(0, 5).map((d, i) => {
+                  {recentDuels.filter(d => !d.action_name || d.winner_id !== d.loser_id).slice(0, 5).map((d, i) => {
                     const w = catMap[d.winner_id]
                     const l = catMap[d.loser_id]
-                    if (!w || !l) return null
+                    if (!w || !l || w.id === l.id) return null
                     return (
                       <div key={i} className="flex items-center gap-2 text-xs text-muted">
                         <span className="font-semibold text-text">{w.name}</span>
@@ -221,6 +299,17 @@ export default function AuraPage() {
         {/* ── TAB CLASSEMENT ── */}
         {tab === 'classement' && (
           <div className="space-y-3">
+            {/* Reset (admin) */}
+            {isAuth && (
+              <div className="flex justify-end">
+                <button onClick={resetAura} disabled={resetLoading}
+                  className="flex items-center gap-1.5 text-xs text-muted hover:text-red-500 transition-colors font-semibold disabled:opacity-50">
+                  <RotateCcw size={12} />
+                  {resetLoading ? 'Reset…' : 'Remettre à zéro'}
+                </button>
+              </div>
+            )}
+
             {leaderboard.length === 0 ? (
               <p className="text-center text-muted text-sm py-12">Aucun vote encore — lance des duels !</p>
             ) : leaderboard.map((cat, i) => (
@@ -247,14 +336,14 @@ export default function AuraPage() {
                       <div className="flex items-center justify-between mb-1">
                         <p className="font-display font-semibold text-sm text-text truncate">{cat.name}</p>
                         <span className={`text-xs font-bold tabular-nums ml-2 shrink-0 ${i === 0 ? 'text-gold' : 'text-muted'}`}>
-                          {cat.aura_score || BASE_ELO} ELO
+                          {cat.aura_score || BASE_AURA} pts
                         </span>
                       </div>
                       <div className="h-1.5 rounded-full bg-border overflow-hidden">
                         <motion.div
                           className={`h-full rounded-full ${i === 0 ? 'bg-gradient-to-r from-gold to-amber-400' : 'bg-brand/60'}`}
                           initial={{ width: 0 }}
-                          animate={{ width: `${Math.round(((cat.aura_score || BASE_ELO) / maxElo) * 100)}%` }}
+                          animate={{ width: `${Math.round(((cat.aura_score || BASE_AURA) / maxAura) * 100)}%` }}
                           transition={{ duration: 0.5, delay: 0.1 + i * 0.04 }}
                         />
                       </div>
@@ -263,6 +352,182 @@ export default function AuraPage() {
                 </Link>
               </motion.div>
             ))}
+          </div>
+        )}
+
+        {/* ── TAB ACTIONS ── */}
+        {tab === 'actions' && (
+          <div className="space-y-5">
+
+            {/* Intro */}
+            <div className="rounded-2xl bg-surface border border-border p-4">
+              <p className="font-display font-bold text-text text-sm mb-1">⚡ Donner de l&apos;Aura à un chat</p>
+              <p className="text-xs text-muted leading-relaxed">
+                Certains comportements méritent de l&apos;aura — plus le truc est improbable, plus ça rapporte.
+                Applique une action à un chat pour modifier son score directement.
+              </p>
+            </div>
+
+            {/* Sélectionner un chat */}
+            <div>
+              <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2">1. Quel chat ?</p>
+              <select
+                value={selectedCatId}
+                onChange={e => setSelectedCatId(e.target.value)}
+                className="input-field text-sm"
+              >
+                <option value="">Choisir un chat…</option>
+                {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {/* Choisir une action */}
+            <div>
+              <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2">2. Quelle action ?</p>
+              <div className="space-y-2">
+                {allActions.map(action => {
+                  const isSelected = selectedAction?.id === action.id
+                  const pts = action.aura_points
+                  const intensity =
+                    pts <= 5   ? 'text-muted' :
+                    pts <= 20  ? 'text-amber-600' :
+                    pts <= 50  ? 'text-orange-500' :
+                    pts <= 100 ? 'text-red-500' : 'text-purple-600'
+
+                  return (
+                    <motion.button
+                      key={action.id}
+                      onClick={() => setSelectedAction(isSelected ? null : action)}
+                      whileTap={{ scale: 0.97 }}
+                      className={`w-full flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all ${
+                        isSelected ? 'border-brand bg-brand/5' : 'border-border bg-surface hover:border-brand/30'
+                      }`}
+                    >
+                      <span className="text-xl shrink-0">{(action as PresetAction).emoji ?? '⚡'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-display font-semibold text-sm text-text truncate">{action.name}</p>
+                        {(action as PresetAction).note && (
+                          <p className="text-[11px] text-muted italic">{(action as PresetAction).note}</p>
+                        )}
+                      </div>
+                      <span className={`text-sm font-bold tabular-nums shrink-0 ${intensity}`}>
+                        +{pts}
+                      </span>
+                    </motion.button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Appliquer */}
+            <AnimatePresence>
+              {selectedCatId && selectedAction && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                >
+                  <button
+                    onClick={applyAction}
+                    disabled={applyLoading}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand to-teal py-3.5 text-white font-display font-bold shadow-lg disabled:opacity-50"
+                  >
+                    <Zap size={16} />
+                    {applyLoading ? 'Application…' : `+${selectedAction.aura_points} aura à ${cats.find(c => c.id === selectedCatId)?.name ?? '…'}`}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Résultat */}
+            <AnimatePresence>
+              {applyResult && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="rounded-2xl bg-gradient-to-br from-teal/10 to-brand/5 border border-teal/20 p-4 text-center"
+                >
+                  <p className="text-3xl mb-1">⚡</p>
+                  <p className="font-display font-bold text-text">
+                    +{applyResult.delta} aura pour {applyResult.cat_name} !
+                  </p>
+                  <p className="text-sm text-muted mt-1">
+                    Score : {applyResult.new_score} pts
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Créer une action custom */}
+            {isAuth && (
+              <div className="border-t border-border pt-4">
+                <button
+                  onClick={() => setShowNewAction(!showNewAction)}
+                  className="flex items-center gap-2 text-sm font-display font-bold text-brand"
+                >
+                  <Plus size={14} />
+                  Créer une action personnalisée
+                  <ChevronDown size={14} className={`ml-auto transition-transform ${showNewAction ? 'rotate-180' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {showNewAction && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-4 space-y-3">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Emoji"
+                            value={newActionEmoji}
+                            onChange={e => setNewActionEmoji(e.target.value)}
+                            className="input-field w-16 text-center text-lg"
+                            maxLength={2}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Nom de l'action…"
+                            value={newActionName}
+                            onChange={e => setNewActionName(e.target.value)}
+                            className="input-field flex-1 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted font-semibold mb-1 block">
+                            Points d&apos;aura : <span className="font-bold text-text">{newActionPts}</span>
+                          </label>
+                          <input
+                            type="range"
+                            min={1}
+                            max={999}
+                            value={newActionPts}
+                            onChange={e => setNewActionPts(Number(e.target.value))}
+                            className="w-full accent-brand"
+                          />
+                          <div className="flex justify-between text-[10px] text-muted mt-0.5">
+                            <span>1 (nul)</span>
+                            <span>100 (fort)</span>
+                            <span>999 (jetpack)</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={createAction}
+                          disabled={!newActionName.trim()}
+                          className="btn-primary w-full py-2.5 text-sm disabled:opacity-40"
+                        >
+                          Créer l&apos;action
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         )}
       </div>

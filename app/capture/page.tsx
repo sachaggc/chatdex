@@ -16,6 +16,9 @@ interface Category { key: string; label: string; color: string }
 
 type Step = 'photo' | 'select' | 'new-cat-form'
 
+// Nombre max de chats en featuring
+const MAX_FEATURING = 4
+
 // Couleur selon le score de confiance
 function confidenceColor(c: number) {
   if (c >= 0.88) return { bg: 'bg-green-50',  border: 'border-green-200',  text: 'text-green-700',  bar: 'bg-green-400' }
@@ -38,7 +41,8 @@ export default function CapturePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [gps, setGps]               = useState<{ lat: number; lng: number } | null>(null)
   const [photoDate, setPhotoDate]   = useState<Date | null>(null)
-  const [selectedCat, setSelectedCat] = useState<string | null>(null)
+  // Premier chat = primaire, les autres = featuring
+  const [selectedCats, setSelectedCats] = useState<string[]>([])
   const [street, setStreet]         = useState('')
   const [notes, setNotes]           = useState('')
   const [loading, setLoading]       = useState(false)
@@ -51,6 +55,14 @@ export default function CapturePage() {
   // Champs nouveau chat (inline)
   const [newName, setNewName]         = useState('')
   const [newCategory, setNewCategory] = useState('')
+
+  function toggleCat(id: string) {
+    setSelectedCats(prev => {
+      if (prev.includes(id)) return prev.filter(c => c !== id)
+      if (prev.length >= MAX_FEATURING) return prev // max atteint
+      return [...prev, id]
+    })
+  }
 
   // Ref pour éviter la race condition : cats peut être vide au moment du match
   const catsRef = useRef<Cat[]>([])
@@ -68,7 +80,7 @@ export default function CapturePage() {
       const matches = await findMatches(file, catList)
       setSuggestions(matches)
       // Pré-sélectionner le meilleur si score ≥ 85%
-      if (matches[0]?.confidence >= 0.85) setSelectedCat(matches[0].id)
+      if (matches[0]?.confidence >= 0.85) setSelectedCats([matches[0].id])
     } catch { /* ignore */ } finally {
       setMatchLoading(false)
     }
@@ -100,8 +112,9 @@ export default function CapturePage() {
     return url
   }
 
-  async function submit(catId: string) {
-    if (!photoFile) return
+  async function submit() {
+    const [primaryId, ...featuringIds] = selectedCats
+    if (!primaryId || !photoFile) return
     setLoading(true); setError('')
     try {
       const url = await uploadPhoto(photoFile)
@@ -110,19 +123,20 @@ export default function CapturePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cat_id: catId, photo_url: url,
+          cat_id: primaryId, photo_url: url,
           lat: gps?.lat ?? null, lng: gps?.lng ?? null,
           street: street.trim() || null,
           notes: notes.trim() || null,
           seen_at: photoDate?.toISOString() ?? new Date().toISOString(),
+          featuring_cat_ids: featuringIds,
         }),
       })
       if (sr.status === 401) throw new Error('Non connecté — va dans Réglages pour te connecter')
       if (!sr.ok) { const e = await sr.json().catch(() => ({})); throw new Error(e.error ?? 'Erreur enregistrement') }
       // XP check-in + photo de nuit
-      awardXp('CHECKIN', catId)
-      if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', catId)
-      router.push(`/cats/${catId}`)
+      awardXp('CHECKIN', primaryId)
+      if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', primaryId)
+      router.push(`/cats/${primaryId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
       setLoading(false)
@@ -166,12 +180,16 @@ export default function CapturePage() {
     }
   }
 
+  const selectedCat = selectedCats[0] ?? null // compat
+
   // IDs des chats suggérés (pour les remonter en tête dans la liste complète)
   const suggestionIds = new Set(suggestions.map(s => s.id))
   const sortedCats = [
     ...cats.filter(c => suggestionIds.has(c.id)),
     ...cats.filter(c => !suggestionIds.has(c.id)),
   ]
+
+  const isFeaturingMode = selectedCats.length > 1
 
   return (
     <div className="min-h-svh pb-10">
@@ -224,7 +242,10 @@ export default function CapturePage() {
             {/* Sélection chat */}
             {step === 'select' && (
               <div className="space-y-4">
-                <p className="font-display font-bold text-lg text-text">C&apos;est quel chat ?</p>
+                <div>
+                  <p className="font-display font-bold text-lg text-text">C&apos;est quel chat ?</p>
+                  <p className="text-xs text-muted mt-0.5">Tu peux en sélectionner plusieurs s&apos;ils sont plusieurs sur la photo — le 1er sera le chat principal.</p>
+                </div>
 
                 {/* ── Bouton d'analyse manuelle ──────────────────────────── */}
                 {!matchLoading && suggestions.length === 0 && photoFile && (
@@ -263,7 +284,7 @@ export default function CapturePage() {
                             const colors = confidenceColor(s.confidence)
                             const pct = Math.round(s.confidence * 100)
                             const catData = cats.find(c => c.id === s.id)
-                            const isSelected = selectedCat === s.id
+                            const isSelected = selectedCats.includes(s.id)
 
                             return (
                               <motion.button
@@ -271,7 +292,7 @@ export default function CapturePage() {
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: i * 0.06 }}
-                                onClick={() => setSelectedCat(isSelected ? null : s.id)}
+                                onClick={() => toggleCat(s.id)}
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
                                   isSelected ? 'bg-teal/8' : 'bg-surface hover:bg-parchment/50'
                                 }`}
@@ -298,11 +319,11 @@ export default function CapturePage() {
                                   </div>
                                 </div>
 
-                                {/* Checkmark si sélectionné */}
-                                <div className={`shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                  isSelected ? 'bg-teal border-teal' : 'border-border'
+                                {/* Checkmark / numéro si sélectionné */}
+                                <div className={`shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs font-bold ${
+                                  isSelected ? 'bg-teal border-teal text-white' : 'border-border'
                                 }`}>
-                                  {isSelected && <CheckCircle size={12} className="text-white" strokeWidth={3} />}
+                                  {isSelected ? selectedCats.indexOf(s.id) + 1 : null}
                                 </div>
                               </motion.button>
                             )
@@ -373,11 +394,11 @@ export default function CapturePage() {
                   <div className="space-y-2 max-h-56 overflow-y-auto">
                     {sortedCats.map(cat => {
                       const suggestion = suggestions.find(s => s.id === cat.id)
-                      const isSelected = selectedCat === cat.id
+                      const isSelected = selectedCats.includes(cat.id)
                       return (
                         <button
                           key={cat.id}
-                          onClick={() => setSelectedCat(isSelected ? null : cat.id)}
+                          onClick={() => toggleCat(cat.id)}
                           className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                             isSelected ? 'border-brand bg-brand/5' : 'border-border bg-surface hover:border-brand/30'
                           }`}
@@ -388,13 +409,25 @@ export default function CapturePage() {
                               : <div className="flex h-full items-center justify-center opacity-20 text-xl">🐱</div>
                             }
                           </div>
-                          <span className="font-display font-semibold text-text flex-1">{cat.name}</span>
-                          {suggestion && (
+                          <div className="flex-1 min-w-0">
+                            <span className="font-display font-semibold text-text">{cat.name}</span>
+                            {isSelected && selectedCats.indexOf(cat.id) === 0 && (
+                              <span className="ml-2 text-[10px] bg-brand text-white rounded px-1 py-0.5 font-bold">Principal</span>
+                            )}
+                            {isSelected && selectedCats.indexOf(cat.id) > 0 && (
+                              <span className="ml-2 text-[10px] bg-teal/20 text-teal rounded px-1 py-0.5 font-bold">Featuring</span>
+                            )}
+                          </div>
+                          {suggestion && !isSelected && (
                             <span className="text-xs font-bold text-teal tabular-nums">
                               {Math.round(suggestion.confidence * 100)}%
                             </span>
                           )}
-                          {isSelected && <ArrowRight size={16} className="text-brand shrink-0" />}
+                          {isSelected && (
+                            <span className="shrink-0 h-5 w-5 rounded-full bg-brand text-white text-xs flex items-center justify-center font-bold">
+                              {selectedCats.indexOf(cat.id) + 1}
+                            </span>
+                          )}
                         </button>
                       )
                     })}
@@ -402,19 +435,30 @@ export default function CapturePage() {
                 </div>
 
                 {/* ── Valider ────────────────────────────────────────────── */}
-                {selectedCat && (
+                {selectedCats.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-3"
                   >
+                    {isFeaturingMode && (
+                      <div className="rounded-xl bg-teal/5 border border-teal/20 p-3">
+                        <p className="text-xs font-bold text-teal mb-1">📸 Photo featuring</p>
+                        <p className="text-xs text-muted">
+                          Principal : <strong>{cats.find(c => c.id === selectedCats[0])?.name}</strong>
+                          {selectedCats.slice(1).map(id => (
+                            <span key={id}> · <em>{cats.find(c => c.id === id)?.name}</em></span>
+                          ))}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-semibold text-text mb-1">Notes (optionnel)</label>
                       <input type="text" placeholder="Il dormait sur une voiture…" value={notes} onChange={e => setNotes(e.target.value)} className="input-field" />
                     </div>
                     {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-                    <button onClick={() => submit(selectedCat)} disabled={loading} className="btn-primary w-full">
-                      {loading ? 'Enregistrement…' : 'Enregistrer'}
+                    <button onClick={submit} disabled={loading} className="btn-primary w-full">
+                      {loading ? 'Enregistrement…' : isFeaturingMode ? `Enregistrer (featuring × ${selectedCats.length})` : 'Enregistrer'}
                     </button>
                   </motion.div>
                 )}

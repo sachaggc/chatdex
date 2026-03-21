@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       street: body.street ?? null,
       notes: body.notes ?? null,
       seen_at: body.seen_at ?? new Date().toISOString(),
+      featuring_cat_ids: body.featuring_cat_ids ?? [],
     })
     .select()
     .single()

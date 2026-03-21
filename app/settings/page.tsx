@@ -239,7 +239,7 @@ export default function SettingsPage() {
             <div>
               <p className="font-display font-bold text-text">Chatdex <span className="text-muted font-normal text-xs">v1.1</span></p>
               <p className="text-xs text-muted mt-0.5">Le Pokédex des chats de Rabat 🇲🇦</p>
-              <p className="text-xs text-muted">Made with 🍵 rue Adis Abeba, Océan</p>
+              <p className="text-xs text-muted">Fait avec du 🍵 atay b n3na3 — rue Adis Abeba, Océan</p>
             </div>
           </div>
         </section>
