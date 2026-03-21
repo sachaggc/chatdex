@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { X, Eye, Search, Check } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { X, Eye, Search, MapPin } from 'lucide-react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Cat } from '@/types'
@@ -16,182 +16,215 @@ export default function QuickVuModal({ open, onClose }: Props) {
   const { awardXp } = useProfile()
   const [cats, setCats]     = useState<Cat[]>([])
   const [search, setSearch] = useState('')
-  const [done, setDone]       = useState<string | null>(null) // cat id just registered
-  const [loading, setLoading] = useState<string | null>(null) // cat id being submitted
-  const [gpsStatus, setGpsStatus] = useState<'idle' | 'searching' | 'found' | 'failed'>('idle')
+  // Map catId → timestamp du dernier tap (pour l'animation)
+  const [tapped, setTapped] = useState<Record<string, number>>({})
+  const [sessionCount, setSessionCount] = useState(0)
+  const [gpsOk, setGpsOk] = useState<boolean | null>(null) // null = en cours
+
+  // GPS en continu — on garde la position la plus récente
+  const posRef = useRef<{ lat: number; lng: number } | null>(null)
+  const watchRef = useRef<number | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
+  // Démarre/arrête le watch GPS quand le modal s'ouvre/ferme
   useEffect(() => {
-    if (open) {
-      fetch('/api/cats').then(r => r.json()).then((d: Cat[]) => {
-        setCats(d.filter(c => !c.unnamed))
-      }).catch(() => {})
+    if (!open) {
+      if (watchRef.current !== null) navigator.geolocation?.clearWatch(watchRef.current)
+      watchRef.current = null
+      posRef.current = null
+      setGpsOk(null)
       setSearch('')
-      setDone(null)
-      setGpsStatus('idle')
-      setTimeout(() => searchRef.current?.focus(), 200)
+      setTapped({})
+      setSessionCount(0)
+      return
     }
+
+    // Fetch cats
+    fetch('/api/cats').then(r => r.json()).then((d: Cat[]) => {
+      setCats(d.filter(c => !c.unnamed))
+    }).catch(() => {})
+
+    // GPS watch continu
+    if (navigator.geolocation) {
+      setGpsOk(null)
+      watchRef.current = navigator.geolocation.watchPosition(
+        pos => {
+          posRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          setGpsOk(true)
+        },
+        () => setGpsOk(false),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
+      )
+    } else {
+      setGpsOk(false)
+    }
+
+    setTimeout(() => searchRef.current?.focus(), 250)
   }, [open])
+
+  const logVu = useCallback(async (cat: Cat) => {
+    const now = Date.now()
+    // Anti-double-tap : ignore si tapé il y a moins de 1.5s
+    if (tapped[cat.id] && now - tapped[cat.id] < 1500) return
+
+    setTapped(prev => ({ ...prev, [cat.id]: now }))
+    setSessionCount(prev => prev + 1)
+    if (navigator.vibrate) navigator.vibrate(40)
+
+    const pos = posRef.current
+    try {
+      await fetch('/api/sightings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cat_id: cat.id,
+          lat: pos?.lat ?? null,
+          lng: pos?.lng ?? null,
+          seen_at: new Date().toISOString(),
+        }),
+      })
+      awardXp('CHECKIN', cat.id)
+    } catch { /* ignore — on réessaie pas, c'est du vu rapide */ }
+  }, [tapped, awardXp])
 
   const filtered = cats.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  async function quickVu(cat: Cat) {
-    if (loading) return
-    setLoading(cat.id)
-    setGpsStatus('searching')
-    try {
-      let lat: number | null = null
-      let lng: number | null = null
-      // Géoloc rapide (on n'attend pas trop)
-      await new Promise<void>(resolve => {
-        if (!navigator.geolocation) { setGpsStatus('failed'); resolve(); return }
-        const t = setTimeout(() => { setGpsStatus('failed'); resolve() }, 5000)
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            lat = pos.coords.latitude
-            lng = pos.coords.longitude
-            setGpsStatus('found')
-            clearTimeout(t); resolve()
-          },
-          () => { setGpsStatus('failed'); clearTimeout(t); resolve() },
-          { timeout: 5000, enableHighAccuracy: true }
-        )
-      })
-      await fetch('/api/sightings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cat_id: cat.id, lat, lng, seen_at: new Date().toISOString() }),
-      })
-      awardXp('CHECKIN', cat.id)
-      if (navigator.vibrate) navigator.vibrate([30, 10, 60])
-      setDone(cat.id)
-      setTimeout(() => {
-        setDone(null)
-        onClose()
-      }, 1200)
-    } catch { /* ignore */ }
-    finally { setLoading(null) }
-  }
-
   return (
     <AnimatePresence>
       {open && (
-        <>
-          {/* Fond */}
-          <motion.div
-            className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Sheet */}
-          <motion.div
-            className="fixed inset-x-0 bottom-0 z-[201] bg-cream rounded-t-3xl shadow-2xl"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            style={{ maxHeight: '80dvh' }}
-          >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="h-1 w-10 rounded-full bg-border" />
-            </div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 pb-3 pt-1">
-              <div className="flex items-center gap-2">
-                <Eye size={18} className="text-brand" />
-                <p className="font-display font-bold text-text text-base">Vu rapide</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* Indicateur GPS */}
-                {gpsStatus === 'searching' && (
-                  <span className="flex items-center gap-1 text-[11px] text-amber-500 font-semibold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    GPS…
-                  </span>
-                )}
-                {gpsStatus === 'found' && (
-                  <span className="flex items-center gap-1 text-[11px] text-teal font-semibold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-teal" />
-                    📍
-                  </span>
-                )}
-                {gpsStatus === 'failed' && (
-                  <span className="text-[11px] text-muted">sans GPS</span>
-                )}
-                <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full bg-surface hover:bg-border transition-colors">
-                  <X size={16} className="text-muted" />
-                </button>
-              </div>
-            </div>
-
-            {/* Recherche */}
-            <div className="px-4 pb-3">
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-                <input
-                  ref={searchRef}
-                  type="search"
-                  placeholder="Rechercher un chat…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-surface border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-brand/50"
-                />
-              </div>
-            </div>
-
-            {/* Grille chats */}
-            <div className="overflow-y-auto px-4 pb-8" style={{ maxHeight: 'calc(80dvh - 140px)' }}>
-              {filtered.length === 0 ? (
-                <p className="text-center text-muted text-sm py-10">Aucun chat trouvé</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2.5">
-                  {filtered.map(cat => {
-                    const isDone    = done === cat.id
-                    const isLoading = loading === cat.id
-                    return (
-                      <motion.button
-                        key={cat.id}
-                        onClick={() => quickVu(cat)}
-                        disabled={!!loading || !!done}
-                        whileTap={{ scale: 0.94 }}
-                        className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
-                          isDone ? 'border-teal shadow-lg shadow-teal/20' : 'border-border hover:border-brand/40'
-                        }`}
-                      >
-                        {/* Photo */}
-                        <div className="aspect-square relative bg-parchment">
-                          {cat.main_photo_url
-                            ? <Image src={cat.main_photo_url} alt={cat.name} fill className="object-cover" sizes="120px" />
-                            : <div className="h-full flex items-center justify-center text-2xl opacity-20">🐱</div>
-                          }
-                          {(isLoading || isDone) && (
-                            <div className={`absolute inset-0 flex items-center justify-center ${isDone ? 'bg-teal/70' : 'bg-black/30'}`}>
-                              {isDone
-                                ? <Check size={28} className="text-white" strokeWidth={3} />
-                                : <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                              }
-                            </div>
-                          )}
-                        </div>
-                        {/* Nom */}
-                        <div className="p-1.5 bg-surface">
-                          <p className="text-[11px] font-display font-bold text-text truncate text-center leading-tight">{cat.name}</p>
-                        </div>
-                      </motion.button>
-                    )
-                  })}
-                </div>
+        <motion.div
+          className="fixed inset-0 z-[200] flex flex-col bg-navy"
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3 px-4 pt-12 pb-3 shrink-0">
+            <div className="flex-1 flex items-center gap-2">
+              <Eye size={20} className="text-gold" />
+              <p className="font-display font-bold text-white text-lg">Vu rapide</p>
+              {sessionCount > 0 && (
+                <motion.span
+                  key={sessionCount}
+                  initial={{ scale: 1.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="rounded-full bg-teal text-white text-xs font-bold px-2 py-0.5 font-display"
+                >
+                  {sessionCount} enregistré{sessionCount > 1 ? 's' : ''}
+                </motion.span>
               )}
             </div>
-          </motion.div>
-        </>
+
+            {/* GPS status */}
+            <div className="flex items-center gap-1.5 mr-1">
+              <MapPin size={13} className={
+                gpsOk === true  ? 'text-teal' :
+                gpsOk === false ? 'text-white/30' : 'text-amber-400'
+              } />
+              <span className={`text-[11px] font-semibold ${
+                gpsOk === true  ? 'text-teal' :
+                gpsOk === false ? 'text-white/30' : 'text-amber-400 animate-pulse'
+              }`}>
+                {gpsOk === true ? 'GPS OK' : gpsOk === false ? 'sans GPS' : 'GPS…'}
+              </span>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="h-9 w-9 flex items-center justify-center rounded-full bg-white/10 text-white"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Recherche */}
+          <div className="px-4 pb-3 shrink-0">
+            <div className="relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+              <input
+                ref={searchRef}
+                type="search"
+                placeholder="Filtrer les chats…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/10 text-sm focus:outline-none focus:bg-white/15"
+              />
+            </div>
+          </div>
+
+          {/* Grille chats — plein écran scrollable */}
+          <div className="flex-1 overflow-y-auto px-4 pb-6">
+            {filtered.length === 0 ? (
+              <p className="text-center text-white/40 text-sm py-16">Aucun chat trouvé</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {filtered.map(cat => {
+                  const lastTap  = tapped[cat.id] ?? 0
+                  const isRecent = Date.now() - lastTap < 1500
+
+                  return (
+                    <motion.button
+                      key={cat.id}
+                      onClick={() => logVu(cat)}
+                      whileTap={{ scale: 0.93 }}
+                      className="relative rounded-2xl overflow-hidden border-2 transition-colors text-left"
+                      style={{ borderColor: isRecent ? 'rgb(56 178 172)' : 'rgba(255,255,255,0.1)' }}
+                    >
+                      {/* Photo */}
+                      <div className="aspect-[4/3] relative bg-navy/50">
+                        {cat.main_photo_url
+                          ? <Image
+                              src={cat.main_photo_url}
+                              alt={cat.name}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 640px) 45vw, 200px"
+                            />
+                          : <div className="h-full flex items-center justify-center text-3xl opacity-20">🐱</div>
+                        }
+
+                        {/* Flash "enregistré" */}
+                        <AnimatePresence>
+                          {isRecent && (
+                            <motion.div
+                              key={lastTap}
+                              initial={{ opacity: 0.9 }}
+                              animate={{ opacity: 0 }}
+                              transition={{ duration: 1.2 }}
+                              className="absolute inset-0 flex items-center justify-center bg-teal/60"
+                            >
+                              <motion.span
+                                initial={{ scale: 0.5, opacity: 1 }}
+                                animate={{ scale: 1.2, opacity: 0 }}
+                                transition={{ duration: 0.8 }}
+                                className="text-4xl"
+                              >
+                                ✓
+                              </motion.span>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Nom */}
+                      <div className="px-2.5 py-2 bg-white/5">
+                        <p className="font-display font-bold text-white text-sm truncate">{cat.name}</p>
+                        {lastTap > 0 && (
+                          <p className="text-[10px] text-teal font-semibold mt-0.5">
+                            {new Date(lastTap).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                      </div>
+                    </motion.button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   )
