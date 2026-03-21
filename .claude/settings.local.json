@@ -4,7 +4,9 @@
       "Bash(/opt/homebrew/bin/brew --version)",
       "Bash(/usr/local/bin/brew --version)",
       "Bash(/opt/homebrew/bin/node --version)",
-      "Bash(/opt/homebrew/bin/npm --version)"
+      "Bash(/opt/homebrew/bin/npm --version)",
+      "Read(//Users/sachaggc/Perso/**)",
+      "Bash(/opt/homebrew/bin/npm install:*)"
     ]
   }
 }
