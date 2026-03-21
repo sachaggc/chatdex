@@ -51,11 +51,11 @@ function buildDescriptor(data: ImageData): Float32Array {
 
       // ── Filtre background ──────────────────────────────────────────────────
       // Murs blancs / ciel très clair : valeur haute + faible saturation
-      if (v > 0.87 && s < 0.13) continue
-      // Ombres très profondes : aucune information colorée
-      if (v < 0.07) continue
+      if (v > 0.92 && s < 0.08) continue
+      // Pixels totalement noirs (sans info) — SEUIL BAS : ne pas exclure les chats noirs
+      if (v < 0.02) continue
       // Bleu du ciel : teinte 0.55–0.70 (200°–250°) + forte saturation + haute valeur
-      if (h > 0.54 && h < 0.71 && s > 0.4 && v > 0.55) continue
+      if (h > 0.54 && h < 0.71 && s > 0.45 && v > 0.6) continue
 
       // ── Poids gaussien centré ──────────────────────────────────────────────
       const dx = (x - cx) / cx

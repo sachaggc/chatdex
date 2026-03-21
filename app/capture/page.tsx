@@ -81,7 +81,7 @@ export default function CapturePage() {
       )
     }
     setStep('select')
-    runMatching(file)
+    // Ne pas déclencher automatiquement — l'utilisateur clique sur le bouton
   }
 
   async function uploadPhoto(file: File): Promise<string> {
@@ -211,6 +211,16 @@ export default function CapturePage() {
             {step === 'select' && (
               <div className="space-y-4">
                 <p className="font-display font-bold text-lg text-text">C&apos;est quel chat ?</p>
+
+                {/* ── Bouton d'analyse manuelle ──────────────────────────── */}
+                {!matchLoading && suggestions.length === 0 && photoFile && (
+                  <button
+                    onClick={() => runMatching(photoFile)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-teal/30 bg-teal/5 py-2.5 text-sm font-display font-semibold text-teal hover:bg-teal/10 transition-colors"
+                  >
+                    <Sparkles size={14} /> Analyser la robe du chat
+                  </button>
+                )}
 
                 {/* ── Bloc suggestions ───────────────────────────────────── */}
                 <AnimatePresence>

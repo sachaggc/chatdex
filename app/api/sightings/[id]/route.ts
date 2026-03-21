@@ -20,7 +20,7 @@ export async function DELETE(
   return new NextResponse(null, { status: 204 })
 }
 
-// PATCH /api/sightings/[id] — retire seulement la photo (garde l'observation)
+// PATCH /api/sightings/[id] — modifie photo_url et/ou seen_at
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -33,9 +33,13 @@ export async function PATCH(
   const body = await request.json()
   const supabase = getSupabaseAdmin()
 
+  const updates: Record<string, unknown> = {}
+  if ('photo_url' in body) updates.photo_url = body.photo_url ?? null
+  if ('seen_at'   in body) updates.seen_at   = body.seen_at
+
   const { data, error } = await supabase
     .from('sightings')
-    .update({ photo_url: body.photo_url ?? null })
+    .update(updates)
     .eq('id', id)
     .select()
     .single()

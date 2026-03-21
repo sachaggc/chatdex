@@ -58,6 +58,8 @@ export default function CatDetailPage() {
   const [mergeTarget, setMergeTarget]   = useState('')
   const [mergeLoading, setMergeLoading] = useState(false)
   const [deleteMode, setDeleteMode]     = useState(false)
+  const [editingDate, setEditingDate]   = useState<string | null>(null) // sighting id
+  const [editDateVal, setEditDateVal]   = useState('')
 
   useEffect(() => {
     fetch(`/api/cats/${id}`)
@@ -129,6 +131,18 @@ export default function CatDetailPage() {
       const updated = await fetch(`/api/cats/${id}`).then(r => r.json())
       setCat(updated)
     }
+  }
+
+  async function saveSightingDate(sightingId: string) {
+    if (!editDateVal) return
+    await fetch(`/api/sightings/${sightingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seen_at: new Date(editDateVal).toISOString() }),
+    })
+    setEditingDate(null)
+    const data = await fetch(`/api/cats/${id}`).then(r => r.json())
+    setCat(data)
   }
 
   if (loading) return (
@@ -312,11 +326,27 @@ export default function CatDetailPage() {
                     {s.photo_url ? <Camera size={14} className="text-brand" /> : <Eye size={14} className="text-muted" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted">
-                      {new Date(s.seen_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                      {' · '}
-                      {new Date(s.seen_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                    {editingDate === s.id ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <input
+                          type="datetime-local"
+                          defaultValue={new Date(s.seen_at).toISOString().slice(0, 16)}
+                          onChange={e => setEditDateVal(e.target.value)}
+                          className="text-xs border border-brand rounded-md px-2 py-1 bg-surface text-text"
+                        />
+                        <button onClick={() => saveSightingDate(s.id)} className="text-xs font-bold text-brand">OK</button>
+                        <button onClick={() => setEditingDate(null)} className="text-xs text-muted">Annuler</button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted flex items-center gap-1">
+                        {new Date(s.seen_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                        {' · '}
+                        {new Date(s.seen_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        <button onClick={() => { setEditingDate(s.id); setEditDateVal(new Date(s.seen_at).toISOString().slice(0,16)) }} className="ml-1 text-border hover:text-muted transition-colors">
+                          <Edit3 size={10} />
+                        </button>
+                      </p>
+                    )}
                     {s.street && <p className="text-sm text-text font-medium mt-0.5 flex items-center gap-1"><MapPin size={11} /> {s.street}</p>}
                     {s.notes && <p className="text-sm text-muted italic mt-0.5">{s.notes}</p>}
                   </div>
