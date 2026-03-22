@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import Link from 'next/link'
 import { Cat } from '@/types'
@@ -15,7 +15,18 @@ interface CatWithCoords extends Cat {
 
 interface Props { cats: CatWithCoords[] }
 
-const RABAT: [number, number] = [34.0209, -6.8416]
+// Quartier Océan, Rabat — fallback si aucun marker
+const OCEAN: [number, number] = [34.015, -6.855]
+
+function FitBounds({ cats }: { cats: CatWithCoords[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (cats.length === 0) return
+    const bounds = cats.map(c => [c.avg_lat, c.avg_lng] as [number, number])
+    map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 16 })
+  }, [cats, map])
+  return null
+}
 
 function rarityIcon(rarity: ReturnType<typeof getRarity>) {
   const color = rarity.isShiny ? '#C98A2F' : rarity.color
@@ -44,11 +55,12 @@ export default function GlobalMap({ cats }: Props) {
   }, [])
 
   return (
-    <MapContainer center={RABAT} zoom={14} style={{ height: '100%', width: '100%' }}>
+    <MapContainer center={OCEAN} zoom={15} style={{ height: '100%', width: '100%' }}>
       <TileLayer
         attribution='© <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <FitBounds cats={cats} />
       {cats.map((cat) => {
         const r = getRarity(cat.sightings_count ?? 0)
         return (

@@ -165,7 +165,7 @@ export default function StatsPage() {
               <p className="font-display font-bold text-text text-sm uppercase tracking-wide">Carte des spots</p>
               <span className="text-xs text-muted">({stats.mapCats.length} chats localisés)</span>
             </div>
-            <div className="rounded-2xl overflow-hidden border border-border" style={{ height: 320 }}>
+            <div className="rounded-2xl overflow-hidden border border-border" style={{ height: 320, isolation: 'isolate' }}>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <GlobalMap cats={stats.mapCats as any} />
             </div>

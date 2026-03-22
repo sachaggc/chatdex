@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Grid2X2, BarChart2, Settings, Eye, Camera, Swords } from 'lucide-react'
@@ -19,6 +20,9 @@ export default function BottomNav() {
   const router   = useRouter()
   const [mode, setMode]           = useState<'photo' | 'vue'>('photo')
   const [showQuickVu, setShowQuickVu] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   function handleCentralPress() {
     if (mode === 'photo') {
@@ -28,7 +32,7 @@ export default function BottomNav() {
     }
   }
 
-  return (
+  const content = (
     <>
       <nav className="bottom-nav">
         <div className="flex items-center justify-around px-2 h-16">
@@ -114,4 +118,7 @@ export default function BottomNav() {
       <QuickVuModal open={showQuickVu} onClose={() => setShowQuickVu(false)} />
     </>
   )
+
+  if (!mounted) return null
+  return createPortal(content, document.body)
 }
