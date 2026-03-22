@@ -3,15 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Grid2X2, BarChart2, Flame, Settings, Eye, Camera, Vote } from 'lucide-react'
+import { Grid2X2, BarChart2, Settings, Eye, Camera, Vote } from 'lucide-react'
 import { motion } from 'framer-motion'
 import QuickVuModal from './QuickVuModal'
 
 const NAV = [
   { href: '/',          label: 'Galerie',  Icon: Grid2X2  },
   { href: '/stats',     label: 'Stats',    Icon: BarChart2 },
-  { href: '/politique', label: 'Félitics', Icon: Vote     },
-  { href: '/aura',      label: 'Aura',     Icon: Flame    },
+  { href: '/politique', label: 'Arènes',   Icon: Vote     },
   { href: '/settings',  label: 'Réglages', Icon: Settings },
 ]
 

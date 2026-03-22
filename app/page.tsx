@@ -10,6 +10,7 @@ import CatCard from '@/components/CatCard'
 import BottomNav from '@/components/BottomNav'
 import TopBar from '@/components/TopBar'
 import ProfileBar from '@/components/ProfileBar'
+import NewsTicker from '@/components/NewsTicker'
 import { DEFAULT_CATEGORIES, getRarityRelative } from '@/lib/rarity'
 
 interface Category { key: string; label: string; color: string }
@@ -21,6 +22,7 @@ export default function GalleriePage() {
   const [filter, setFilter]   = useState<string>('all')
   const [categories, setCategories] = useState<Category[]>([])
   const [showFilters, setShowFilters] = useState(false)
+  const [sortBy, setSortBy] = useState<'rarity' | 'recent' | 'politique'>('rarity')
 
   useEffect(() => {
     fetch('/api/cats').then(r => r.json()).then(d => { setCats(d); setLoading(false) }).catch(() => setLoading(false))
@@ -36,11 +38,40 @@ export default function GalleriePage() {
   // Tous les counts pour la rareté relative
   const allCounts = useMemo(() => namedCats.map(c => c.sightings_count ?? 0), [namedCats])
 
-  const filtered = useMemo(() => namedCats.filter(c => {
-    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase())
-    const matchCat    = filter === 'all' || c.category === filter
-    return matchSearch && matchCat
-  }), [namedCats, search, filter])
+  const categoryMap = useMemo(() => {
+    const map: Record<string, { label: string; color: string }> = {}
+    for (const c of categories) map[c.key] = { label: c.label, color: c.color }
+    return map
+  }, [categories])
+
+  const filtered = useMemo(() => {
+    let result = namedCats.filter(c => {
+      const matchSearch = c.name.toLowerCase().includes(search.toLowerCase())
+      const matchCat    = filter === 'all' || c.category === filter
+      return matchSearch && matchCat
+    })
+
+    if (sortBy === 'rarity') {
+      result = [...result].sort((a, b) => {
+        const ra = getRarityRelative(a.sightings_count ?? 0, allCounts)
+        const rb = getRarityRelative(b.sightings_count ?? 0, allCounts)
+        return ra.level - rb.level
+      })
+    } else if (sortBy === 'recent') {
+      result = [...result].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    } else if (sortBy === 'politique') {
+      result = [...result].sort((a, b) => {
+        const ca = (a as Cat & { candidate_id?: string }).candidate_id ?? ''
+        const cb = (b as Cat & { candidate_id?: string }).candidate_id ?? ''
+        if (!ca && cb) return 1
+        if (ca && !cb) return -1
+        return ca.localeCompare(cb)
+      })
+    }
+    return result
+  }, [namedCats, search, filter, sortBy, allCounts])
 
   return (
     <div className="min-h-svh pb-24">
@@ -91,6 +122,8 @@ export default function GalleriePage() {
         </motion.div>
       </div>
 
+      <NewsTicker />
+
       {/* Barre de profil */}
       <ProfileBar />
 
@@ -125,6 +158,18 @@ export default function GalleriePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Tri */}
+      <div className="flex gap-1.5 px-4 pt-3 pb-1 overflow-x-auto no-scrollbar">
+        {([['rarity', '🎯 Rareté'], ['recent', '🕐 Récent'], ['politique', '🗳️ Politique']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setSortBy(key)}
+            className={`shrink-0 text-[11px] font-display font-bold px-2.5 py-1 rounded-full border transition-all ${
+              sortBy === key ? 'bg-navy text-white border-navy' : 'text-muted border-border bg-surface'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="px-4 pt-4 space-y-6">
 
@@ -195,7 +240,7 @@ export default function GalleriePage() {
           </motion.div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {filtered.map((cat, i) => <CatCard key={cat.id} cat={cat} index={i} rarityOverride={getRarityRelative(cat.sightings_count ?? 0, allCounts)} />)}
+            {filtered.map((cat, i) => <CatCard key={cat.id} cat={cat} index={i} rarityOverride={getRarityRelative(cat.sightings_count ?? 0, allCounts)} categoryMap={categoryMap} />)}
           </div>
         )}
       </div>

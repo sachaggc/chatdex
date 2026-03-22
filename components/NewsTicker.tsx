@@ -1,24 +1,24 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-interface Candidate { name: string; emoji: string; count: number; pct: number }
+interface NewsItem { id: string; content: string; is_auto: boolean }
 
-const STATIC_HEADLINES = [
-  '🔴 BREAKING : Le MatouMètre™ s\'affole dans le quartier Océan — les chats votent !',
-  '📊 SONDAGE EXCLUSIF : 3 chats sur 4 refusent de se prononcer — l\'abstention féline bat des records',
-  '🚨 SOURCE BIEN PLACÉE : un chat aurait été aperçu en train de lire un tract politique rue Adis Abeba',
-  '🐾 CONFLIT D\'INTÉRÊTS : le candidat préféré des chats promet des sardines gratuites si élu',
-  '🎙️ LE GRAND DÉBAT : les chats du quartier restent muets face aux questions des journalistes',
-  '📡 ALERTE CHATDEX : mouvement de troupes félines signalé côté Océan — situation à surveiller',
-  '🗳️ INFO CHATDEX : la participation au premier tour s\'annonce record — les chats font la queue',
-  '⚡ FLASH : un chat a mordu un sondeur — l\'incident diplomatique est en cours d\'évaluation',
-  '🌊 TENDANCE : la vague féline déferle sur l\'Océan — les experts sont dépassés',
-  '🤫 MURMURES DE RUE : un chat influent aurait changé de camp en échange d\'une boîte de thon',
+const FALLBACK = [
+  '🔴 BREAKING : le MatouMètre™ de l\'Océan s\'affole — participation record attendue ce soir',
+  '📊 SONDAGE EXCLUSIF : 3 chats sur 4 refusent de se prononcer sur la question catalane',
+  '🐾 INFO CHATDEX : mouvement de troupes félines signalé rue Adis Abeba — la situation est tendue',
+  '🎙️ LE GRAND DÉBAT : les chats du quartier restent muets face aux journalistes en embuscade',
+  '🤫 MURMURES DE RUE : un chat influent aurait changé de camp en échange d\'une boîte de thon premium',
+  '⚡ FLASH : un chat aurait mordu un sondeur — l\'incident diplomatique est en cours d\'évaluation',
+  '🌊 TENDANCE : la vague féline déferle sur l\'Océan — les experts sont formellement dépassés',
+  '🛋️ ABSTENTION RECORD : plusieurs chats refusent de voter, préférant dormir selon nos sources',
 ]
 
 export default function NewsTicker() {
-  const [headlines, setHeadlines] = useState<string[]>(STATIC_HEADLINES)
+  const router = useRouter()
+  const [text, setText] = useState(FALLBACK.join('  ·  '))
 
   useEffect(() => {
     fetch('/api/political/stats')
@@ -26,59 +26,51 @@ export default function NewsTicker() {
       .then(data => {
         if (!data) return
         const dynamic: string[] = []
-
-        const top: Candidate = data.candidateStats?.[0]
+        const top = data.candidateStats?.[0]
         if (top?.count > 0) {
-          dynamic.push(
-            `${top.emoji ?? '🐾'} EN TÊTE : ${top.name} domine avec ${top.pct}% des votes félins de l'Océan — la concurrence est sonnée`,
-            `📈 MATOU-MÈTRE : ${top.name} consolide son avance — ${top.count} chat${top.count > 1 ? 's' : ''} dans son camp`,
-          )
+          dynamic.push(`${top.emoji ?? '🐾'} EN TÊTE : ${top.name} domine avec ${top.pct}% des chats de l'Océan`)
         }
-
-        const second: Candidate = data.candidateStats?.[1]
+        const second = data.candidateStats?.[1]
         if (second?.count > 0 && top?.count > 0) {
-          dynamic.push(
-            `⚔️ DUEL AU SOMMET : ${top.name} vs ${second.name} — l'écart se resserre dans le quartier Océan`,
-          )
+          const gap = top.pct - second.pct
+          dynamic.push(`⚔️ DUEL : ${top.name} vs ${second.name} — écart de ${gap} point${gap > 1 ? 's' : ''} seulement`)
         }
-
         if (data.abstentions > 0) {
-          dynamic.push(
-            `🛋️ ABSTENTION RECORD : ${data.abstentions} chat${data.abstentions > 1 ? 's' : ''} refus${data.abstentions > 1 ? 'ent' : 'e'} de voter — "je préfère dormir" déclare l'un d'eux`,
-          )
+          dynamic.push(`🛋️ ABSTENTION : ${data.abstentions} chat${data.abstentions > 1 ? 's' : ''} refus${data.abstentions > 1 ? 'ent' : 'e'} catégoriquement de voter`)
         }
-
-        if (data.undecided > 0) {
-          dynamic.push(
-            `🤷 INDÉCIS : ${data.undecided} chat${data.undecided > 1 ? 's' : ''} encore sans affiliation politique — les courtisans s'agitent`,
-          )
-        }
-
         if (data.total > 0) {
-          dynamic.push(
-            `🗺️ CHATDEX LIVE : ${data.total} chats recensés dans le quartier Océan — le plus grand cadastre félin du Maroc`,
-          )
+          dynamic.push(`🗺️ ${data.total} chats recensés dans le quartier Océan · Rue Adis Abeba`)
         }
+        const allNews = [...dynamic, ...FALLBACK]
+        setText(allNews.join('  ·  '))
+      })
+      .catch(() => {})
 
-        setHeadlines([...dynamic, ...STATIC_HEADLINES])
+    // Fetch aussi les news custom
+    fetch('/api/news')
+      .then(r => r.ok ? r.json() : [])
+      .then((items: NewsItem[]) => {
+        if (items.length > 0) {
+          const custom = items.map(i => i.content)
+          setText(() => [...custom, ...FALLBACK].join('  ·  '))
+        }
       })
       .catch(() => {})
   }, [])
 
-  if (headlines.length === 0) return null
-
-  // Build a long repeated string for seamless loop
-  const text = headlines.join('     ·     ') + '     ·     '
-
   return (
-    <div className="news-ticker" role="marquee" aria-label="Breaking news Félitics">
+    <div
+      className="news-ticker cursor-pointer select-none"
+      onClick={() => router.push('/news')}
+      title="Cliquer pour gérer les breaking news"
+    >
       <div className="ticker-badge">
         <span className="ticker-dot" />
         LIVE
       </div>
       <div className="ticker-track-wrapper">
-        <div className="ticker-track">
-          <span>{text}{text}</span>
+        <div className="ticker-track" key={text}>
+          <span aria-hidden="true">{text}  ·  {text}  ·  </span>
         </div>
       </div>
     </div>

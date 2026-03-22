@@ -372,7 +372,7 @@ export default function CapturePage() {
                         awardXp('NEW_CAT', newCat.id)
                         if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', newCat.id)
                         // Forcer un rechargement de la galerie (sans cache router)
-                        window.location.href = `/cats/${newCat.id}/edit`
+                        window.location.href = '/'
                       } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setLoading(false) }
                     }}
                     disabled={loading}

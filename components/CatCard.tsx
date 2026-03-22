@@ -11,12 +11,14 @@ interface CandidateInfo { name: string; emoji: string; color: string }
 
 const STAMP_ICONS = [Sparkles, Star, Diamond, Gem, Circle, Minus, Minus]
 
-interface Props { cat: Cat & { candidate?: CandidateInfo | null }; index?: number; rarityOverride?: RarityInfo }
+interface Props { cat: Cat & { candidate?: CandidateInfo | null }; index?: number; rarityOverride?: RarityInfo; categoryMap?: Record<string, {label: string; color: string; bg?: string}> }
 
-export default function CatCard({ cat, index = 0, rarityOverride }: Props) {
+export default function CatCard({ cat, index = 0, rarityOverride, categoryMap }: Props) {
   const count  = cat.sightings_count ?? 0
   const rarity = rarityOverride ?? getRarity(count)
-  const catDef = cat.category ? DEFAULT_CATEGORIES[cat.category] : null
+  const catDef = cat.category
+    ? (categoryMap?.[cat.category] ?? DEFAULT_CATEGORIES[cat.category] ?? null)
+    : null
   const StampIcon = STAMP_ICONS[rarity.level] ?? Minus
 
   return (
