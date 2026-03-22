@@ -211,14 +211,14 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* ── Navigation rapide ──────────────────────────────── */}
+        {/* ── Raccourcis ─────────────────────────────────────── */}
         <section>
-          <p className="text-[11px] font-display font-bold text-muted uppercase tracking-widest mb-2 px-1">Aller à</p>
+          <p className="text-[11px] font-display font-bold text-muted uppercase tracking-widest mb-2 px-1">Raccourcis</p>
           <div className="rounded-2xl bg-surface border border-border overflow-hidden divide-y divide-border">
             {[
-              { href: '/stats', label: 'Statistiques globales', emoji: '📊' },
-              { href: '/aura',  label: 'Aura Farm — classement', emoji: '🔥' },
-              { href: '/map',   label: 'Carte des spots', emoji: '🗺️' },
+              { href: '/politique', label: 'Félitics — sondages & coalitions', emoji: '🗳️' },
+              { href: '/news',      label: 'Breaking news — gérer les titres', emoji: '📡' },
+              { href: '/capture',   label: 'Ajouter un chat', emoji: '📷' },
             ].map(({ href, label, emoji }) => (
               <a key={href} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-parchment/50 transition-colors">
                 <span className="text-lg">{emoji}</span>

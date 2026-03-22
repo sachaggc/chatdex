@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Trophy, Ghost, BarChart2, Eye, Star } from 'lucide-react'
+import { Trophy, Ghost, BarChart2, Eye, Star, MapPin } from 'lucide-react'
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
+
+const GlobalMap = dynamic(() => import('@/components/GlobalMap'), { ssr: false })
 
 interface StatsData {
   totalCats: number
@@ -14,6 +17,7 @@ interface StatsData {
   catOfTheWeek: { id: string; name: string; main_photo_url: string | null; weekCount: number } | null
   missing: { id: string; name: string; main_photo_url: string | null; lastSeen: string | null }[]
   topCats: { id: string; name: string; main_photo_url: string | null; count: number }[]
+  mapCats?: { id: string; name: string; main_photo_url: string | null; avg_lat: number; avg_lng: number; sightings_count: number; category: string; unnamed?: boolean }[]
 }
 
 function daysSince(dateStr: string | null): number {
@@ -149,6 +153,21 @@ export default function StatsPage() {
                   </div>
                 </Link>
               ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Carte des spots */}
+        {stats?.mapCats && stats.mapCats.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={15} className="text-teal" />
+              <p className="font-display font-bold text-text text-sm uppercase tracking-wide">Carte des spots</p>
+              <span className="text-xs text-muted">({stats.mapCats.length} chats localisés)</span>
+            </div>
+            <div className="rounded-2xl overflow-hidden border border-border" style={{ height: 320 }}>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <GlobalMap cats={stats.mapCats as any} />
             </div>
           </motion.div>
         )}

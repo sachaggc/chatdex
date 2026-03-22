@@ -66,6 +66,37 @@ export async function GET() {
   // Total observations
   const totalSightings = topCats.reduce((s, c) => s + c.count, 0)
 
+  // Coordonnées moyennes par chat (pour la carte)
+  const { data: geoSightings } = await supabase
+    .from('sightings')
+    .select('cat_id, lat, lng')
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+
+  const coordsMap: Record<string, { lats: number[]; lngs: number[] }> = {}
+  for (const s of geoSightings ?? []) {
+    if (!coordsMap[s.cat_id]) coordsMap[s.cat_id] = { lats: [], lngs: [] }
+    coordsMap[s.cat_id].lats.push(s.lat)
+    coordsMap[s.cat_id].lngs.push(s.lng)
+  }
+
+  const mapCats = (cats ?? [])
+    .filter(c => coordsMap[c.id])
+    .map(c => {
+      const coords = coordsMap[c.id]
+      const avg_lat = coords.lats.reduce((a, b) => a + b, 0) / coords.lats.length
+      const avg_lng = coords.lngs.reduce((a, b) => a + b, 0) / coords.lngs.length
+      return {
+        id: c.id,
+        name: c.name,
+        main_photo_url: c.main_photo_url,
+        category: c.category,
+        sightings_count: (c.sightings as unknown as { count: number }[])?.[0]?.count ?? 0,
+        avg_lat,
+        avg_lng,
+      }
+    })
+
   return NextResponse.json({
     totalCats,
     totalSightings,
@@ -82,5 +113,6 @@ export async function GET() {
       lastSeen: lastSeenMap[c.id] ?? null,
     })),
     topCats,
+    mapCats,
   })
 }
