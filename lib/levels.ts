@@ -68,6 +68,7 @@ export const XP_REWARDS = {
   NIGHT_PHOTO:   40,  // photo prise entre 21h et 6h
   NEW_STREET:    60,  // premier chat sur une nouvelle rue
   ANECDOTE:       5,  // ajout d'un murmure/anecdote
+  MISSION:        0,  // mission quotidienne (montant variable via meta.customAmount)
 } as const
 
 export type XpAction = keyof typeof XP_REWARDS

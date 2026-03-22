@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Trophy, Ghost, BarChart2, Eye, Star, MapPin } from 'lucide-react'
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
+import RivalryBanner from '@/components/RivalryBanner'
 
 const GlobalMap = dynamic(() => import('@/components/GlobalMap'), { ssr: false })
 
@@ -39,6 +40,8 @@ export default function StatsPage() {
       <TopBar title="Statistiques" />
 
       <div className="px-4 py-5 max-w-lg mx-auto space-y-7">
+
+        <RivalryBanner />
 
         {/* Chiffres clés */}
         <div className="grid grid-cols-2 gap-3">

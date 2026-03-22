@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'username et action valide requis' }, { status: 400 })
   }
 
-  const amount = XP_REWARDS[action]
+  const amount = (action === 'MISSION' && typeof meta?.customAmount === 'number')
+    ? meta.customAmount
+    : XP_REWARDS[action]
   const supabase = getSupabaseAdmin()
 
   // Récupère le profil courant

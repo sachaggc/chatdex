@@ -39,6 +39,7 @@ const ACTION_LABELS: Record<XpAction, string> = {
   NIGHT_PHOTO: 'Photo de nuit 🌙',
   NEW_STREET:  'Nouvelle rue explorée !',
   ANECDOTE:    'Murmure ajouté',
+  MISSION:     'Mission accomplie !',
 }
 
 let toastCounter = 0
@@ -70,7 +71,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem('chatdex_username')
   }, [])
 
-  const awardXp = useCallback(async (action: XpAction, cat_id?: string, meta?: Record<string, unknown>) => {
+  const awardXp = useCallback(async (
+    action: XpAction,
+    cat_id?: string,
+    meta?: Record<string, unknown>
+  ) => {
     const p = profileRef.current
     if (!p) return
 
@@ -95,6 +100,39 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate([30, 50, 30])
       }
+
+      // ── Mission tracking ──────────────────────────────────────────────────
+      if (action !== 'MISSION') {
+        const today = new Date().toISOString().slice(0, 10)
+        const { getDailyMissions, updateMissionProgress } = await import('@/lib/missions')
+        const missions = getDailyMissions(today)
+        const { newlyCompleted } = updateMissionProgress(p.username, today, action, missions)
+
+        for (const mission of newlyCompleted) {
+          // Mission toast (distinct style: gold)
+          const mId = ++toastCounter
+          setToasts(prev => [...prev, { id: mId, amount: mission.xpReward, label: `🎯 Mission : ${mission.label}` }])
+          setTimeout(() => setToasts(prev => prev.filter(t => t.id !== mId)), 4000)
+
+          // Vibration spéciale
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([50, 30, 50, 30, 100])
+          }
+
+          // Award bonus XP for mission completion
+          fetch('/api/xp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: p.username,
+              action: 'MISSION',
+              meta: { customAmount: mission.xpReward, missionId: mission.id },
+            }),
+          }).then(r => r.json()).then(({ new_xp: nx, level: lv, streak: st }) => {
+            setProfileState(prev => prev ? { ...prev, total_xp: nx, level: lv, streak_days: st } : prev)
+          }).catch(() => {})
+        }
+      }
     } catch { /* ignore */ }
   }, [])
 
@@ -104,16 +142,22 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
       {/* ── XP Toasts ── */}
       <div className="fixed bottom-24 inset-x-0 flex flex-col items-center gap-2 pointer-events-none z-[9999]">
-        {toasts.map(t => (
-          <div
-            key={t.id}
-            className="animate-xp-toast flex items-center gap-2 rounded-full bg-brand px-4 py-2 shadow-lg"
-            style={{ animation: 'xpToast 2.8s ease forwards' }}
-          >
-            <span className="text-white font-display font-bold text-sm">+{t.amount} XP</span>
-            <span className="text-white/80 text-xs">{t.label}</span>
-          </div>
-        ))}
+        {toasts.map(t => {
+          const isMission = t.label.startsWith('🎯')
+          return (
+            <div
+              key={t.id}
+              className="flex items-center gap-2 rounded-full px-4 py-2 shadow-lg"
+              style={{
+                background: isMission ? '#C98A2F' : '#C34B32',
+                animation: `xpToast ${isMission ? '4' : '2.8'}s ease forwards`,
+              }}
+            >
+              <span className="text-white font-display font-bold text-sm">+{t.amount} XP</span>
+              <span className="text-white/80 text-xs">{t.label}</span>
+            </div>
+          )
+        })}
       </div>
 
       <style>{`

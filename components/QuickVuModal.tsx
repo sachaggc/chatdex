@@ -6,6 +6,8 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Cat } from '@/types'
 import { useProfile } from '@/components/ProfileContext'
+import CatchAnimation from './CatchAnimation'
+import { getRarity } from '@/lib/rarity'
 
 interface Props {
   open: boolean
@@ -20,6 +22,7 @@ export default function QuickVuModal({ open, onClose }: Props) {
   const [tapped, setTapped] = useState<Record<string, number>>({})
   const [sessionCount, setSessionCount] = useState(0)
   const [gpsOk, setGpsOk] = useState<boolean | null>(null) // null = en cours
+  const [catchAnim, setCatchAnim] = useState<{ active: boolean; rarityLevel?: number; catName?: string }>({ active: false })
 
   // GPS en continu — on garde la position la plus récente
   const posRef = useRef<{ lat: number; lng: number } | null>(null)
@@ -84,6 +87,9 @@ export default function QuickVuModal({ open, onClose }: Props) {
         }),
       })
       awardXp('CHECKIN', cat.id)
+      // Trigger catch animation based on cat rarity
+      const rarity = getRarity(Number(cat.sightings_count ?? 0))
+      setCatchAnim({ active: true, rarityLevel: rarity.level, catName: cat.name })
     } catch { /* ignore — on réessaie pas, c'est du vu rapide */ }
   }, [tapped, awardXp])
 
@@ -224,6 +230,13 @@ export default function QuickVuModal({ open, onClose }: Props) {
               </div>
             )}
           </div>
+
+          <CatchAnimation
+            active={catchAnim.active}
+            onDone={() => setCatchAnim({ active: false })}
+            rarityLevel={catchAnim.rarityLevel}
+            catName={catchAnim.catName}
+          />
         </motion.div>
       )}
     </AnimatePresence>

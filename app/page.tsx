@@ -10,6 +10,7 @@ import CatCard from '@/components/CatCard'
 import BottomNav from '@/components/BottomNav'
 import TopBar from '@/components/TopBar'
 import ProfileBar from '@/components/ProfileBar'
+import DailyMissions from '@/components/DailyMissions'
 import NewsTicker from '@/components/NewsTicker'
 import { DEFAULT_CATEGORIES, getRarityRelative, getRarity } from '@/lib/rarity'
 
@@ -168,6 +169,9 @@ export default function GalleriePage() {
 
       {/* Barre de profil */}
       <ProfileBar />
+
+      {/* Missions quotidiennes */}
+      <DailyMissions />
 
       {/* Filtres catégories (toujours visibles, scroll horizontal) */}
       <div className="px-4 pt-3 pb-1 flex gap-2 overflow-x-auto no-scrollbar border-b border-border/40">
