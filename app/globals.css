@@ -247,14 +247,13 @@ body {
 
 /* ── News Ticker (Félitics / BFM style) ──────────────────── */
 .news-ticker {
-  position: fixed;
-  top: 0; left: 0; right: 0;
+  position: relative;
+  width: 100%;
   height: 28px;
   display: flex;
   align-items: center;
   background: #111;
   color: #fff;
-  z-index: 200;
   overflow: hidden;
   border-bottom: 2px solid #C34B32;
 }

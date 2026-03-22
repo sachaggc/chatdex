@@ -170,15 +170,19 @@ export default function AuraPage() {
 
       {/* Onglets */}
       <div className="sticky top-14 z-30 bg-cream/90 backdrop-blur-md border-b border-border">
-        <div className="flex max-w-lg mx-auto">
+        <div className="flex max-w-lg mx-auto overflow-x-auto no-scrollbar">
           {(['duel', 'classement', 'actions'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-3 text-sm font-display font-bold transition-colors ${
+              className={`flex-1 py-3 text-sm font-display font-bold transition-colors whitespace-nowrap px-3 ${
                 tab === t ? 'text-brand border-b-2 border-brand' : 'text-muted'
               }`}>
               {t === 'duel' ? '⚔️ Duel' : t === 'classement' ? '👑 Classement' : '⚡ Actions'}
             </button>
           ))}
+          <Link href="/politique"
+            className="flex-shrink-0 py-3 text-sm font-display font-bold transition-colors px-3 text-muted hover:text-brand whitespace-nowrap">
+            🗳️ Félitics
+          </Link>
         </div>
       </div>
 
