@@ -40,7 +40,8 @@ export default function GalleriePage() {
 
   const unnamedCats = useMemo(() => cats.filter(c => c.unnamed), [cats])
   const namedCats   = useMemo(() => cats.filter(c => !c.unnamed), [cats])
-  const allCounts   = useMemo(() => namedCats.map(c => c.sightings_count ?? 0), [namedCats])
+  // Conversion Number() obligatoire : Supabase peut retourner count comme string
+  const allCounts   = useMemo(() => namedCats.map(c => Number(c.sightings_count ?? 0)), [namedCats])
 
   const categoryMap = useMemo(() => {
     const map: Record<string, { label: string; color: string }> = {}
@@ -68,12 +69,12 @@ export default function GalleriePage() {
     if (sortBy === 'rarity') {
       const map = new Map<number, Group>()
       const sorted = [...filtered].sort((a, b) => {
-        const ra = getRarityRelative(a.sightings_count ?? 0, allCounts)
-        const rb = getRarityRelative(b.sightings_count ?? 0, allCounts)
+        const ra = getRarityRelative(Number(a.sightings_count ?? 0), allCounts)
+        const rb = getRarityRelative(Number(b.sightings_count ?? 0), allCounts)
         return ra.level - rb.level
       })
       for (const cat of sorted) {
-        const r = getRarityRelative(cat.sightings_count ?? 0, allCounts)
+        const r = getRarityRelative(Number(cat.sightings_count ?? 0), allCounts)
         if (!map.has(r.level)) map.set(r.level, { key: `r${r.level}`, label: r.label, color: r.color, emoji: r.emoji, cats: [] })
         map.get(r.level)!.cats.push(cat)
       }
@@ -237,6 +238,16 @@ export default function GalleriePage() {
           <AnimatePresence mode="wait">
             <motion.div key={sortBy} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }} className="space-y-5">
+
+              {/* Aide contextuelle selon le tri */}
+              {sortBy === 'politique' && groups.length === 1 && groups[0].key === '__undecided__' && (
+                <div className="rounded-2xl border border-dashed border-border bg-surface/60 p-4 text-center space-y-1">
+                  <p className="text-sm font-display font-bold text-muted">🗳️ Aucun vote enregistré</p>
+                  <p className="text-xs text-muted">Ouvre la fiche d&apos;un chat et assigne-lui un candidat pour le voir apparaître ici.</p>
+                  <a href="/politique" className="inline-block mt-1 text-xs font-bold text-brand underline underline-offset-2">Voir Félitics →</a>
+                </div>
+              )}
+
               {groups.map(group => (
                 <div key={group.key}>
                   {/* Section header */}
@@ -245,7 +256,7 @@ export default function GalleriePage() {
                       <div className="h-px flex-1 bg-border" />
                       <span className="flex items-center gap-1.5 text-[11px] font-display font-bold uppercase tracking-widest shrink-0"
                         style={{ color: group.color }}>
-                        {sortBy === 'politique' && group.emoji && <span>{group.emoji}</span>}
+                        {group.emoji && <span>{group.emoji}</span>}
                         {group.label}
                         <span className="text-muted/60 font-normal normal-case">({group.cats.length})</span>
                       </span>
@@ -259,7 +270,7 @@ export default function GalleriePage() {
                         key={cat.id}
                         cat={cat}
                         index={i}
-                        rarityOverride={getRarityRelative(cat.sightings_count ?? 0, allCounts)}
+                        rarityOverride={getRarityRelative(Number(cat.sightings_count ?? 0), allCounts)}
                         categoryMap={categoryMap}
                       />
                     ))}

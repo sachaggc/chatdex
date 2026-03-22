@@ -179,10 +179,6 @@ export default function AuraPage() {
               {t === 'duel' ? '⚔️ Duel' : t === 'classement' ? '👑 Classement' : '⚡ Actions'}
             </button>
           ))}
-          <Link href="/politique"
-            className="flex-shrink-0 py-3 text-sm font-display font-bold transition-colors px-3 text-muted hover:text-brand whitespace-nowrap">
-            🗳️ Félitics
-          </Link>
         </div>
       </div>
 

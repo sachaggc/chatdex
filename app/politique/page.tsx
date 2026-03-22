@@ -37,7 +37,7 @@ function SecondTour({ a, b, total }: { a: Candidate; b: Candidate; total: number
   return (
     <div className="rounded-2xl border border-border bg-surface overflow-hidden">
       <div className="bg-navy px-4 py-2.5 flex items-center gap-2">
-        <span className="text-white/50 text-[10px] font-display font-bold uppercase tracking-widest">⚔️ Second Tour imaginaire</span>
+        <span className="text-white/50 text-[10px] font-display font-bold uppercase tracking-widest">🗳️ Premier Tour — Qualifiés au Second Tour</span>
         <span className="ml-auto text-[10px] text-white/40">{voted} votes comptabilisés</span>
       </div>
       <div className="grid grid-cols-2">
@@ -69,11 +69,11 @@ function SecondTour({ a, b, total }: { a: Candidate; b: Candidate; total: number
         <motion.div style={{ background: b.color, flex: pctB }}
           initial={{ flex: 0 }} animate={{ flex: pctB }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
       </div>
-      {pctA > 50 && (
-        <div className="px-4 py-2 text-xs font-semibold text-center" style={{ color: a.color }}>
-          {a.emoji} {a.name} remporte le second tour
-        </div>
-      )}
+      <div className="px-4 py-2 text-xs text-center text-muted/60 italic">
+        {pctA > pctB
+          ? `${a.emoji} ${a.name.split(' ').pop()} en tête au premier tour`
+          : `${b.emoji} ${b.name.split(' ').pop()} en tête au premier tour`}
+      </div>
     </div>
   )
 }
@@ -350,7 +350,7 @@ export default function PolitiquePage() {
 
   return (
     <div className="min-h-svh pb-28">
-      <TopBar backHref="/aura" title="🗳️ Félitics — Océan" />
+      <TopBar backHref="/arenes" title="🗳️ Félitics — Océan" />
 
       {/* Hero compact */}
       <div className="px-4 pt-4 pb-3">
