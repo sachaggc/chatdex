@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
       category: body.category ?? null,
       character_traits: body.character_traits ?? [],
       main_photo_url: body.main_photo_url ?? null,
+      candidate_id: body.candidate_id ?? null,
+      vote_abstain: body.vote_abstain ?? false,
     })
     .select()
     .single()

@@ -9,7 +9,7 @@ import ImageUpload from '@/components/ImageUpload'
 import TopBar from '@/components/TopBar'
 
 interface Category  { key: string; label: string; color: string }
-interface Candidate { id: string; name: string; emoji: string; color: string; alignment: { name: string; color: string } | null }
+interface Candidate { id: string; name: string; emoji: string; color: string; alignment: { id: string; name: string; color: string; position: number } | null }
 
 export default function EditCatPage() {
   const { id } = useParams<{ id: string }>()
@@ -40,7 +40,13 @@ export default function EditCatPage() {
       setVoteAbstain(data.vote_abstain ?? false)
     })
     fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
-    fetch('/api/political/candidates').then(r => r.json()).then(setCandidates).catch(() => {})
+    fetch('/api/political/candidates').then(r => r.json()).then((data: Candidate[]) => {
+      // Tri gauche → droite par position d'alignement
+      const sorted = [...data].sort((a, b) =>
+        (a.alignment?.position ?? 999) - (b.alignment?.position ?? 999)
+      )
+      setCandidates(sorted)
+    }).catch(() => {})
   }, [id])
 
   async function handleSubmit(e: React.FormEvent) {

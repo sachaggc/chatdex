@@ -12,7 +12,8 @@ import TopBar from '@/components/TopBar'
 import { findMatches, MatchResult } from '@/lib/catMatcher'
 import { useProfile } from '@/components/ProfileContext'
 
-interface Category { key: string; label: string; color: string }
+interface Category  { key: string; label: string; color: string }
+interface Candidate { id: string; name: string; emoji: string; color: string; alignment: { id: string; name: string; color: string; position: number } | null }
 
 type Step = 'photo' | 'select' | 'new-cat-form'
 
@@ -36,6 +37,7 @@ export default function CapturePage() {
   const { awardXp } = useProfile()
   const [cats, setCats]             = useState<Cat[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [candidates, setCandidates] = useState<Candidate[]>([])
   const [step, setStep]             = useState<Step>('photo')
   const [photoFile, setPhotoFile]   = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -53,8 +55,10 @@ export default function CapturePage() {
   const [matchLoading, setMatchLoading] = useState(false)
 
   // Champs nouveau chat (inline)
-  const [newName, setNewName]         = useState('')
-  const [newCategory, setNewCategory] = useState('')
+  const [newName, setNewName]           = useState('')
+  const [newCategory, setNewCategory]   = useState('')
+  const [newCandidateId, setNewCandidateId] = useState('')
+  const [newVoteAbstain, setNewVoteAbstain] = useState(false)
 
   function toggleCat(id: string) {
     setSelectedCats(prev => {
@@ -70,6 +74,13 @@ export default function CapturePage() {
   useEffect(() => {
     fetch('/api/cats').then(r => r.json()).then(data => { setCats(data); catsRef.current = data }).catch(() => {})
     fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
+    fetch('/api/political/candidates').then(r => r.json()).then((data: Candidate[]) => {
+      // Tri gauche → droite par position d'alignement
+      const sorted = [...data].sort((a, b) =>
+        (a.alignment?.position ?? 999) - (b.alignment?.position ?? 999)
+      )
+      setCandidates(sorted)
+    }).catch(() => {})
   }, [])
 
   async function runMatching(file: File) {
@@ -152,7 +163,13 @@ export default function CapturePage() {
       const catRes = await fetch('/api/cats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), category: newCategory || null, main_photo_url: url }),
+        body: JSON.stringify({
+          name: newName.trim(),
+          category: newCategory || null,
+          main_photo_url: url,
+          candidate_id: newCandidateId || null,
+          vote_abstain: newVoteAbstain,
+        }),
       })
       if (catRes.status === 401) throw new Error('Non connecté — va dans Réglages pour te connecter')
       if (!catRes.ok) { const e = await catRes.json().catch(() => ({})); throw new Error(e.error ?? 'Erreur création chat') }
@@ -490,6 +507,41 @@ export default function CapturePage() {
                     ))}
                   </div>
                 </div>
+                {/* Vote politique */}
+                {candidates.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-semibold text-text mb-2">🗳️ Vote politique <span className="text-muted font-normal">(optionnel)</span></label>
+                    <label className="flex items-center gap-2 cursor-pointer rounded-xl border border-border p-2.5 mb-2 text-sm"
+                      style={newVoteAbstain ? { borderColor: '#6B7280', background: '#6B728015' } : {}}>
+                      <input type="checkbox" className="accent-brand" checked={newVoteAbstain}
+                        onChange={e => { setNewVoteAbstain(e.target.checked); if (e.target.checked) setNewCandidateId('') }} />
+                      <span className="font-medium text-text">🛋️ Abstentionniste</span>
+                    </label>
+                    {!newVoteAbstain && (
+                      <div className="grid grid-cols-1 gap-1 max-h-44 overflow-y-auto pr-1">
+                        {candidates.map(c => (
+                          <button key={c.id} type="button"
+                            onClick={() => setNewCandidateId(newCandidateId === c.id ? '' : c.id)}
+                            className="text-left rounded-xl border-2 px-3 py-2 text-sm font-medium transition-all flex items-center gap-2"
+                            style={newCandidateId === c.id
+                              ? { background: c.color + '20', borderColor: c.color, color: '#1A1007' }
+                              : { borderColor: '#DFC9AE', color: '#7A6352' }
+                            }>
+                            <span>{c.emoji}</span>
+                            <span className="flex-1">{c.name}</span>
+                            {c.alignment && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0"
+                                style={{ background: c.alignment.color }}>
+                                {c.alignment.name.split(' ')[0]}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-semibold text-text mb-1">Notes (optionnel)</label>
                   <input type="text" placeholder="Première impression…" value={notes} onChange={e => setNotes(e.target.value)} className="input-field" />
