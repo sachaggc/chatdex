@@ -245,6 +245,119 @@ body {
   border-radius: 1px;
 }
 
+/* ── News Ticker (Félitics / BFM style) ──────────────────── */
+.news-ticker {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  background: #111;
+  color: #fff;
+  z-index: 200;
+  overflow: hidden;
+  border-bottom: 2px solid #C34B32;
+}
+
+.ticker-badge {
+  shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #C34B32;
+  padding: 0 10px;
+  height: 100%;
+  font-size: 10px;
+  font-weight: 900;
+  font-family: var(--font-syne, sans-serif);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ticker-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  animation: ticker-blink 1s infinite;
+}
+
+@keyframes ticker-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+.ticker-track-wrapper {
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.ticker-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: ticker-scroll 80s linear infinite;
+  font-size: 11px;
+  font-weight: 600;
+  padding-left: 16px;
+  font-family: var(--font-syne, sans-serif);
+  letter-spacing: 0.01em;
+}
+
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Décale le contenu pour laisser place au ticker */
+body { padding-top: 28px; }
+
+/* ── Parapluie pluie (CatCard) ───────────────────────────── */
+.rain-umbrella {
+  display: none;
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: rgba(0,80,160,0.75);
+  border-radius: 6px;
+  padding: 3px 5px;
+  font-size: 13px;
+  line-height: 1;
+  backdrop-filter: blur(4px);
+}
+
+[data-weather="rain"] .rain-umbrella,
+[data-weather="storm"] .rain-umbrella {
+  display: flex;
+}
+
+/* Petit badge candidat sur la carte */
+.cat-card-candidate {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  border-radius: 6px;
+  padding: 2px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  white-space: nowrap;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Scrollbar utilitaire */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* ── Pluie ────────────────────────────────────────────────── */
 @keyframes rain-fall {
   0%   { transform: translateY(-100px) rotate(10deg); opacity: 0; }

@@ -3,15 +3,16 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Grid2X2, BarChart2, Flame, Settings, Eye, Camera } from 'lucide-react'
+import { Grid2X2, BarChart2, Flame, Settings, Eye, Camera, Vote } from 'lucide-react'
 import { motion } from 'framer-motion'
 import QuickVuModal from './QuickVuModal'
 
 const NAV = [
-  { href: '/',         label: 'Galerie',  Icon: Grid2X2  },
-  { href: '/stats',    label: 'Stats',    Icon: BarChart2 },
-  { href: '/aura',     label: 'Aura',     Icon: Flame    },
-  { href: '/settings', label: 'Réglages', Icon: Settings },
+  { href: '/',          label: 'Galerie',  Icon: Grid2X2  },
+  { href: '/stats',     label: 'Stats',    Icon: BarChart2 },
+  { href: '/politique', label: 'Félitics', Icon: Vote     },
+  { href: '/aura',      label: 'Aura',     Icon: Flame    },
+  { href: '/settings',  label: 'Réglages', Icon: Settings },
 ]
 
 export default function BottomNav() {
@@ -37,7 +38,7 @@ export default function BottomNav() {
             const active = pathname === href
             return (
               <Link key={href} href={href}
-                className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
+                className={`flex flex-col items-center gap-1 px-1.5 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
                 <span className={`text-[10px] font-display font-semibold tracking-wide ${active ? 'text-brand' : 'text-muted'}`}>
                   {label}
@@ -99,7 +100,7 @@ export default function BottomNav() {
             const active = pathname === href
             return (
               <Link key={href} href={href}
-                className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
+                className={`flex flex-col items-center gap-1 px-1.5 py-1 transition-colors ${active ? 'text-brand' : 'text-muted'}`}>
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
                 <span className={`text-[10px] font-display font-semibold tracking-wide ${active ? 'text-brand' : 'text-muted'}`}>
                   {label}

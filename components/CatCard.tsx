@@ -7,9 +7,11 @@ import { Sparkles, Star, Diamond, Gem, Circle, Minus } from 'lucide-react'
 import { Cat, RarityInfo } from '@/types'
 import { getRarity, DEFAULT_CATEGORIES } from '@/lib/rarity'
 
+interface CandidateInfo { name: string; emoji: string; color: string }
+
 const STAMP_ICONS = [Sparkles, Star, Diamond, Gem, Circle, Minus, Minus]
 
-interface Props { cat: Cat; index?: number; rarityOverride?: RarityInfo }
+interface Props { cat: Cat & { candidate?: CandidateInfo | null }; index?: number; rarityOverride?: RarityInfo }
 
 export default function CatCard({ cat, index = 0, rarityOverride }: Props) {
   const count  = cat.sightings_count ?? 0
@@ -62,6 +64,16 @@ export default function CatCard({ cat, index = 0, rarityOverride }: Props) {
               <StampIcon size={9} strokeWidth={2.5} />
               <span>{count}</span>
             </div>
+
+            {/* Badge candidat politique */}
+            {cat.candidate && (
+              <div className="cat-card-candidate" style={{ borderLeft: `2px solid ${cat.candidate.color}` }}>
+                {cat.candidate.emoji} {cat.candidate.name.split(' ').pop()}
+              </div>
+            )}
+
+            {/* Parapluie par temps de pluie */}
+            <div className="rain-umbrella" aria-hidden="true">☂️</div>
           </div>
 
           {/* Infos — style carte postale */}

@@ -8,33 +8,39 @@ import { Cat } from '@/types'
 import ImageUpload from '@/components/ImageUpload'
 import TopBar from '@/components/TopBar'
 
-interface Category { key: string; label: string; color: string }
+interface Category  { key: string; label: string; color: string }
+interface Candidate { id: string; name: string; emoji: string; color: string; alignment: { name: string; color: string } | null }
 
 export default function EditCatPage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
   const [cat, setCat]       = useState<Cat | null>(null)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
+  const [categories,  setCategories]  = useState<Category[]>([])
+  const [candidates,  setCandidates]  = useState<Candidate[]>([])
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState('')
 
-  const [name, setName]           = useState('')
-  const [description, setDescription] = useState('')
-  const [category, setCategory]   = useState('')
-  const [traitsInput, setTraitsInput] = useState('')
+  const [name,         setName]         = useState('')
+  const [description,  setDescription]  = useState('')
+  const [category,     setCategory]     = useState('')
+  const [traitsInput,  setTraitsInput]  = useState('')
+  const [candidateId,  setCandidateId]  = useState<string>('')
+  const [voteAbstain,  setVoteAbstain]  = useState(false)
   const [newPhotoFile, setNewPhotoFile] = useState<File | null>(null)
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/cats/${id}`).then(r => r.json()).then((data: Cat) => {
+    fetch(`/api/cats/${id}`).then(r => r.json()).then((data: Cat & { candidate_id?: string; vote_abstain?: boolean }) => {
       setCat(data)
-      // Pour les chats "à nommer", le champ nom commence vide (pas le nom temp)
       setName(data.unnamed ? '' : (data.name ?? ''))
       setDescription(data.description ?? '')
       setCategory(data.category ?? '')
       setTraitsInput((data.character_traits ?? []).join(', '))
+      setCandidateId(data.candidate_id ?? '')
+      setVoteAbstain(data.vote_abstain ?? false)
     })
     fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
+    fetch('/api/political/candidates').then(r => r.json()).then(setCandidates).catch(() => {})
   }, [id])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -66,6 +72,8 @@ export default function EditCatPage() {
           category: category || null,
           character_traits: traits,
           main_photo_url: mainPhotoUrl,
+          candidate_id: candidateId || null,
+          vote_abstain: voteAbstain,
         }),
       })
       if (!res.ok) throw new Error('Erreur modification')
@@ -166,6 +174,52 @@ export default function EditCatPage() {
           </label>
           <input type="text" value={traitsInput} onChange={e => setTraitsInput(e.target.value)} className="input-field" placeholder="Ex: joueur, méfiant, câlin" />
         </div>
+
+        {/* Vote politique */}
+        {candidates.length > 0 && (
+          <div>
+            <label className="block text-sm font-semibold text-text mb-2">🗳️ Vote politique</label>
+
+            {/* Abstention toggle */}
+            <label className="flex items-center gap-2 cursor-pointer rounded-xl border border-border p-3 mb-2"
+              style={voteAbstain ? { borderColor: '#6B7280', background: '#6B728015' } : {}}>
+              <input type="checkbox" className="accent-brand" checked={voteAbstain}
+                onChange={e => { setVoteAbstain(e.target.checked); if (e.target.checked) setCandidateId('') }} />
+              <span className="text-sm font-medium text-text">🛋️ Abstentionniste — refuse de choisir</span>
+            </label>
+
+            {!voteAbstain && (
+              <div className="grid grid-cols-1 gap-1.5 max-h-56 overflow-y-auto pr-1">
+                <button type="button"
+                  onClick={() => setCandidateId('')}
+                  className={`text-left rounded-xl border px-3 py-2.5 text-sm transition-all ${!candidateId ? 'bg-border/30 border-border font-semibold' : 'border-border text-muted'}`}
+                >
+                  🤷 Indécis
+                </button>
+                {candidates.map(c => (
+                  <button
+                    key={c.id} type="button"
+                    onClick={() => setCandidateId(candidateId === c.id ? '' : c.id)}
+                    className="text-left rounded-xl border-2 px-3 py-2.5 text-sm font-medium transition-all flex items-center gap-2"
+                    style={candidateId === c.id
+                      ? { background: c.color + '20', borderColor: c.color, color: '#1A1007' }
+                      : { borderColor: '#DFC9AE', color: '#7A6352' }
+                    }
+                  >
+                    <span className="text-base">{c.emoji}</span>
+                    <span className="flex-1">{c.name}</span>
+                    {c.alignment && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0"
+                        style={{ background: c.alignment.color }}>
+                        {c.alignment.name.split('-')[0]}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
