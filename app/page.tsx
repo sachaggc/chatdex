@@ -82,21 +82,48 @@ export default function GalleriePage() {
     }
 
     if (sortBy === 'politique') {
+      // Tri par position d'alignment (gauche → droite), sans candidat en dernier
       const withAlignment = [...filtered].sort((a, b) => {
         const pa = a.candidate?.alignment?.position ?? (a.candidate ? 50 : 99)
         const pb = b.candidate?.alignment?.position ?? (b.candidate ? 50 : 99)
         return pa - pb
       })
       const map = new Map<string, Group>()
+      const positionMap = new Map<string, number>() // pour re-trier les groupes
+
       for (const cat of withAlignment) {
-        const align = cat.candidate?.alignment
-        const label = align?.name ?? (cat.candidate ? cat.candidate.name : '🤷 Indécis')
-        const color = align?.color ?? cat.candidate?.color ?? '#9CA3AF'
-        const key   = align?.id ?? cat.candidate?.id ?? '__undecided__'
-        if (!map.has(key)) map.set(key, { key, label, color, emoji: cat.candidate?.emoji, cats: [] })
-        map.get(key)!.cats.push(cat)
+        const cand  = cat.candidate as { id: string; name: string; emoji: string; color: string; alignment?: { id: string; name: string; color: string; position: number } | null } | null
+        const align = cand?.alignment
+        if (align) {
+          // Grouper par alignment
+          const key = `align_${align.id}`
+          if (!map.has(key)) {
+            map.set(key, { key, label: align.name, color: align.color, emoji: undefined, cats: [] })
+            positionMap.set(key, align.position)
+          }
+          map.get(key)!.cats.push(cat)
+        } else if (cand) {
+          // Candidat sans bord → groupe par candidat
+          const key = `cand_${cand.id}`
+          if (!map.has(key)) {
+            map.set(key, { key, label: cand.name, color: cand.color, emoji: cand.emoji, cats: [] })
+            positionMap.set(key, 50)
+          }
+          map.get(key)!.cats.push(cat)
+        } else {
+          // Pas de candidat → Indécis
+          const key = '__undecided__'
+          if (!map.has(key)) {
+            map.set(key, { key, label: '🤷 Indécis', color: '#9CA3AF', emoji: undefined, cats: [] })
+            positionMap.set(key, 99)
+          }
+          map.get(key)!.cats.push(cat)
+        }
       }
-      return Array.from(map.values())
+      // Trier les groupes par position (gauche → droite, indécis en dernier)
+      return Array.from(map.entries())
+        .sort(([ka], [kb]) => (positionMap.get(ka) ?? 99) - (positionMap.get(kb) ?? 99))
+        .map(([, g]) => g)
     }
 
     return [{ key: 'all', label: '', color: '', cats: filtered }]
@@ -252,15 +279,20 @@ export default function GalleriePage() {
                 <div key={group.key}>
                   {/* Section header */}
                   {showSections && group.label && (
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <div className="h-px flex-1 bg-border" />
-                      <span className="flex items-center gap-1.5 text-[11px] font-display font-bold uppercase tracking-widest shrink-0"
-                        style={{ color: group.color }}>
-                        {group.emoji && <span>{group.emoji}</span>}
-                        {group.label}
-                        <span className="text-muted/60 font-normal normal-case">({group.cats.length})</span>
-                      </span>
-                      <div className="h-px flex-1 bg-border" />
+                    <div className="flex items-center gap-2 mb-3 -mx-1">
+                      <div
+                        className="flex items-center gap-2 w-full px-3 py-2 rounded-xl"
+                        style={{ background: group.color + '18', borderLeft: `3px solid ${group.color}` }}
+                      >
+                        {group.emoji && <span className="text-base leading-none">{group.emoji}</span>}
+                        <span className="font-display font-black text-sm uppercase tracking-wider leading-none"
+                          style={{ color: group.color }}>
+                          {group.label}
+                        </span>
+                        <span className="text-xs text-muted font-normal ml-auto">
+                          {group.cats.length} chat{group.cats.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
                     </div>
                   )}
 

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, Plus, LogIn, LogOut, Lock, Tag, Palette, Info, ChevronRight } from 'lucide-react'
-import Image from 'next/image'
+import { Trash2, Plus, LogIn, LogOut, Lock, Tag, Palette, Info, ChevronRight, MapPin, RefreshCw } from 'lucide-react'
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
 import { CATEGORY_COLORS } from '@/lib/rarity'
@@ -24,6 +23,8 @@ export default function SettingsPage() {
   const [adding, setAdding]         = useState(false)
   const [addError, setAddError]     = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillMsg, setBackfillMsg] = useState('')
 
   useEffect(() => {
     fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
@@ -40,6 +41,16 @@ export default function SettingsPage() {
     if (res.ok) { setIsAuth(true); setPassword('') }
     else setAuthError('Mauvais mot de passe')
     setAuthLoading(false)
+  }
+
+  async function backfillGeo() {
+    setBackfilling(true); setBackfillMsg('')
+    try {
+      const res = await fetch('/api/geocode-backfill', { method: 'POST' })
+      const data = await res.json()
+      setBackfillMsg(data.message ?? 'Terminé')
+    } catch { setBackfillMsg('Erreur de géocodage') }
+    finally { setBackfilling(false) }
   }
 
   async function logout() {
@@ -228,6 +239,35 @@ export default function SettingsPage() {
             ))}
           </div>
         </section>
+
+        {/* ── Maintenance ────────────────────────────────────── */}
+        {isAuth && (
+          <section>
+            <p className="text-[11px] font-display font-bold text-muted uppercase tracking-widest mb-2 px-1">Maintenance</p>
+            <div className="rounded-2xl bg-surface border border-border overflow-hidden">
+              <div className="p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <MapPin size={14} className="text-teal" />
+                  <p className="font-semibold text-text text-sm">Géocoder les rues manquantes</p>
+                </div>
+                <p className="text-xs text-muted">
+                  Extrait les noms de rues depuis les coordonnées GPS des observations sans lieu renseigné (max 25 à la fois, ~30s).
+                </p>
+                {backfillMsg && (
+                  <p className="text-xs font-semibold text-teal">{backfillMsg}</p>
+                )}
+                <button
+                  onClick={backfillGeo}
+                  disabled={backfilling}
+                  className="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border border-border bg-parchment hover:bg-border/40 transition-colors disabled:opacity-40"
+                >
+                  <RefreshCw size={13} className={backfilling ? 'animate-spin' : ''} />
+                  {backfilling ? 'En cours… (peut prendre 30s)' : 'Lancer le géocodage'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── À propos ───────────────────────────────────────── */}
         <section>

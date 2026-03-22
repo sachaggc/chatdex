@@ -6,21 +6,31 @@ import { isAuthenticated } from '@/lib/auth'
 export async function GET() {
   const supabase = getSupabaseAdmin()
 
-  const { data, error } = await supabase
+  // Fetch cats (avec count sightings)
+  const { data: catsRaw, error } = await supabase
     .from('cats')
-    .select(`
-      *,
-      sightings(count)
-    `)
+    .select('*, sightings(count)')
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Reshape pour avoir sightings_count comme nombre directement
-  const cats = (data ?? []).map((cat) => ({
+  // Fetch candidats avec alignement (join séparé, pas de FK nécessaire)
+  const { data: candidatesRaw } = await supabase
+    .from('candidates')
+    .select('id, name, emoji, color, alignment:political_alignments(id, name, color, position)')
+
+  // Map candidats par id
+  const candidateMap: Record<string, unknown> = {}
+  for (const c of candidatesRaw ?? []) {
+    candidateMap[c.id] = c
+  }
+
+  // Reshape
+  const cats = (catsRaw ?? []).map((cat) => ({
     ...cat,
-    sightings_count: cat.sightings?.[0]?.count ?? 0,
+    sightings_count: Number(cat.sightings?.[0]?.count ?? 0),
     sightings: undefined,
+    candidate: cat.candidate_id ? (candidateMap[cat.candidate_id] ?? null) : null,
   }))
 
   return NextResponse.json(cats)

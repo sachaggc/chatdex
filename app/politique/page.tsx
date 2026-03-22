@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, RefreshCw } from 'lucide-react'
+
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
 
@@ -217,8 +217,11 @@ function AdminPanel({ onRefresh }: { onRefresh: () => void }) {
   const [newColor, setNewColor] = useState('#888888')
   const [newAlign, setNewAlign] = useState('')
   const [saving, setSaving] = useState(false)
-  const [backfilling, setBackfilling] = useState(false)
-  const [backfillMsg, setBackfillMsg] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName]   = useState('')
+  const [editEmoji, setEditEmoji] = useState('')
+  const [editColor, setEditColor] = useState('')
+  const [editAlign, setEditAlign] = useState('')
 
   useEffect(() => {
     fetch('/api/political/alignments').then(r => r.json()).then(setAlignments)
@@ -244,45 +247,70 @@ function AdminPanel({ onRefresh }: { onRefresh: () => void }) {
     setCandidates(prev => prev.filter(c => c.id !== id)); onRefresh()
   }
 
-  async function backfillGeo() {
-    setBackfilling(true); setBackfillMsg('')
-    try {
-      const res = await fetch('/api/geocode-backfill', { method: 'POST' })
-      const data = await res.json()
-      setBackfillMsg(data.message ?? 'Terminé')
-      onRefresh()
-    } catch { setBackfillMsg('Erreur de géocodage') }
-    finally { setBackfilling(false) }
+  async function saveEdit(id: string) {
+    await fetch('/api/political/candidates', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name: editName.trim(), emoji: editEmoji, color: editColor, alignment_id: editAlign || null }),
+    })
+    setEditingId(null)
+    const data = await fetch('/api/political/candidates').then(r => r.json())
+    setCandidates(data)
+    onRefresh()
   }
 
   return (
     <div className="space-y-5">
-      {/* Géocodage */}
-      <div className="rounded-2xl border border-dashed border-border p-4 space-y-2">
-        <p className="text-xs font-bold text-muted uppercase tracking-widest flex items-center gap-1.5">
-          <MapPin size={11} /> Géocoder les lieux manquants
-        </p>
-        <p className="text-xs text-muted">Extrait automatiquement les noms de rues depuis les coordonnées GPS des sightings sans lieu renseigné.</p>
-        {backfillMsg && <p className="text-xs font-semibold text-brand">{backfillMsg}</p>}
-        <button onClick={backfillGeo} disabled={backfilling}
-          className="flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl border border-border bg-surface hover:bg-parchment transition-colors disabled:opacity-40">
-          <RefreshCw size={11} className={backfilling ? 'animate-spin' : ''} />
-          {backfilling ? 'Géocodage en cours… (peut prendre 30s)' : 'Lancer le géocodage'}
-        </button>
-      </div>
-
-      {/* Candidats */}
-      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+      {/* Candidats — avec édition inline */}
+      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
         {candidates.map(c => (
-          <div key={c.id} className="flex items-center gap-2 rounded-xl bg-surface border border-border px-3 py-2">
-            <span className="text-base">{c.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-text truncate">{c.name}</p>
-              <p className="text-xs text-muted">{c.alignment?.name ?? 'Sans bord'}</p>
+          editingId === c.id ? (
+            /* Mode édition */
+            <div key={c.id} className="rounded-xl border-2 border-brand/40 bg-surface p-3 space-y-2">
+              <div className="flex gap-2">
+                <input value={editEmoji} onChange={e => setEditEmoji(e.target.value)}
+                  className="input-field w-14 text-center text-xl p-1" maxLength={4} />
+                <input value={editName} onChange={e => setEditName(e.target.value)}
+                  className="input-field flex-1 text-sm" placeholder="Nom" />
+              </div>
+              <div className="flex gap-2 items-center">
+                <div className="flex items-center gap-2 flex-1 rounded-xl border border-border px-3 py-2">
+                  <span className="text-xs text-muted">Couleur</span>
+                  <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)}
+                    className="h-6 w-8 rounded cursor-pointer border-0 bg-transparent" />
+                </div>
+                <select value={editAlign} onChange={e => setEditAlign(e.target.value)} className="input-field flex-1 text-sm">
+                  <option value="">Sans bord</option>
+                  {alignments.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setEditingId(null)}
+                  className="flex-1 rounded-xl border border-border py-2 text-xs text-muted font-semibold hover:bg-parchment transition-colors">
+                  Annuler
+                </button>
+                <button onClick={() => saveEdit(c.id)}
+                  className="flex-1 btn-primary py-2 text-xs">
+                  Enregistrer
+                </button>
+              </div>
             </div>
-            <div className="h-3 w-3 rounded-full shrink-0" style={{ background: c.color }} />
-            <button onClick={() => deleteCandidate(c.id)} className="text-muted hover:text-red-400 transition-colors text-xs px-1">✕</button>
-          </div>
+          ) : (
+            /* Mode affichage */
+            <div key={c.id}
+              className="flex items-center gap-2 rounded-xl bg-surface border border-border px-3 py-2 cursor-pointer hover:border-brand/40 transition-colors"
+              onClick={() => { setEditingId(c.id); setEditName(c.name); setEditEmoji(c.emoji); setEditColor(c.color); setEditAlign(c.alignment?.id ?? '') }}>
+              <span className="text-base">{c.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-text truncate">{c.name}</p>
+                <p className="text-xs text-muted">{c.alignment?.name ?? 'Sans bord'}</p>
+              </div>
+              <div className="h-3 w-3 rounded-full shrink-0" style={{ background: c.color }} />
+              <span className="text-[10px] text-muted/60 font-semibold">✎</span>
+              <button onClick={e => { e.stopPropagation(); deleteCandidate(c.id) }}
+                className="text-muted hover:text-red-400 transition-colors text-xs px-1">✕</button>
+            </div>
+          )
         ))}
       </div>
 

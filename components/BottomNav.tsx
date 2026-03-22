@@ -10,7 +10,7 @@ import QuickVuModal from './QuickVuModal'
 const NAV = [
   { href: '/',          label: 'Galerie',  Icon: Grid2X2  },
   { href: '/stats',     label: 'Stats',    Icon: BarChart2 },
-  { href: '/aura',      label: 'Arènes',   Icon: Swords   },
+  { href: '/arenes',    label: 'Arènes',   Icon: Swords   },
   { href: '/settings',  label: 'Réglages', Icon: Settings },
 ]
 
