@@ -9,6 +9,7 @@ import { Trophy, Ghost, BarChart2, Eye, Star, MapPin } from 'lucide-react'
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
 import RivalryBanner from '@/components/RivalryBanner'
+import { SkeletonBox, SkeletonText } from '@/components/Skeleton'
 
 const GlobalMap = dynamic(() => import('@/components/GlobalMap'), { ssr: false })
 
@@ -175,10 +176,34 @@ export default function StatsPage() {
           </motion.div>
         )}
 
+        {/* Skeleton pendant le chargement Supabase */}
         {!stats && (
-          <div className="flex justify-center py-16">
-            <div className="h-6 w-6 rounded-full border-2 border-brand border-t-transparent animate-spin" />
-          </div>
+          <>
+            {/* Chat de la semaine */}
+            <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-4">
+              <SkeletonBox className="h-16 w-16 rounded-xl shrink-0" />
+              <div className="flex-1 space-y-2">
+                <SkeletonText className="w-2/3" />
+                <SkeletonText className="w-1/3" />
+              </div>
+            </div>
+            {/* Top chats */}
+            <div className="space-y-3">
+              <SkeletonText className="w-1/3" />
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <SkeletonBox className="h-3 w-3 rounded shrink-0" />
+                  <SkeletonBox className="h-8 w-8 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <SkeletonText className="w-1/2" />
+                    <SkeletonBox className="h-2 w-full rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Carte */}
+            <SkeletonBox className="h-56 rounded-2xl" />
+          </>
         )}
 
       </div>

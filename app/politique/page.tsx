@@ -7,6 +7,7 @@ import Link from 'next/link'
 
 import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
+import { SkeletonBox, SkeletonText, SkeletonCandidateCard, SkeletonCatGrid } from '@/components/Skeleton'
 
 /* ── Types ── */
 interface Alignment { id: string; name: string; color: string; position: number }
@@ -364,8 +365,30 @@ export default function PolitiquePage() {
   const abstentionPct = stats ? Math.round(((stats.abstentions + stats.undecided) / (stats.total || 1)) * 100) : 0
 
   if (loading) return (
-    <div className="min-h-svh flex items-center justify-center">
-      <div className="h-6 w-6 rounded-full border-2 border-brand border-t-transparent animate-spin" />
+    <div className="min-h-svh pb-24">
+      <TopBar title="Félitics" backHref="/arenes" />
+      <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
+        {/* Onglets */}
+        <div className="flex gap-1 border-b border-border pb-3">
+          <SkeletonBox className="h-9 w-24 rounded-full" />
+          <SkeletonBox className="h-9 w-20 rounded-full opacity-60" />
+          <SkeletonBox className="h-9 w-28 rounded-full opacity-60" />
+          <SkeletonBox className="h-9 w-16 rounded-full opacity-60" />
+        </div>
+        {/* Résumé */}
+        <SkeletonBox className="h-24 rounded-2xl" />
+        {/* Candidats */}
+        <div className="space-y-2.5">
+          <SkeletonText className="w-1/3" />
+          {[...Array(4)].map((_, i) => <SkeletonCandidateCard key={i} />)}
+        </div>
+        {/* Grille chats */}
+        <div className="pt-2 space-y-3">
+          <SkeletonText className="w-1/2" />
+          <SkeletonCatGrid n={6} />
+        </div>
+      </div>
+      <BottomNav />
     </div>
   )
 

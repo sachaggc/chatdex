@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { Cat } from '@/types'
 import ImageUpload from '@/components/ImageUpload'
 import TopBar from '@/components/TopBar'
+import { SkeletonBox, SkeletonText } from '@/components/Skeleton'
 
 interface Category  { key: string; label: string; color: string }
 interface Candidate { id: string; name: string; emoji: string; color: string; alignment: { id: string; name: string; color: string; position: number } | null }
@@ -91,8 +92,13 @@ export default function EditCatPage() {
   }
 
   if (!cat) return (
-    <div className="min-h-svh flex items-center justify-center">
-      <div className="h-6 w-6 rounded-full border-2 border-brand border-t-transparent animate-spin" />
+    <div className="min-h-svh pb-24">
+      <TopBar title="Modifier" backHref="/" />
+      <div className="px-4 pt-5 space-y-4 max-w-lg mx-auto">
+        <SkeletonBox className="aspect-[4/3] rounded-2xl" />
+        {[...Array(4)].map((_, i) => <SkeletonBox key={i} className="h-12 rounded-xl" />)}
+        <SkeletonBox className="h-10 rounded-xl" />
+      </div>
     </div>
   )
 

@@ -13,6 +13,7 @@ import TopBar from '@/components/TopBar'
 import BottomNav from '@/components/BottomNav'
 import GossipBox from '@/components/GossipBox'
 import { useProfile } from '@/components/ProfileContext'
+import { SkeletonBox, SkeletonText } from '@/components/Skeleton'
 
 const CatMap = dynamic(() => import('@/components/CatMap'), {
   ssr: false,
@@ -163,8 +164,36 @@ export default function CatDetailPage() {
   }
 
   if (loading) return (
-    <div className="min-h-svh flex items-center justify-center">
-      <div className="h-6 w-6 rounded-full border-2 border-brand border-t-transparent animate-spin" />
+    <div className="min-h-svh pb-24">
+      <TopBar backHref="/" />
+      {/* Photo hero skeleton */}
+      <SkeletonBox className="aspect-[4/3] w-full rounded-none" />
+      <div className="px-4 pt-4 space-y-4">
+        {/* Nom + badge */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2 flex-1">
+            <SkeletonText className="w-1/2 h-6" />
+            <SkeletonText className="w-1/3" />
+          </div>
+          <SkeletonBox className="h-8 w-20 rounded-full shrink-0" />
+        </div>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2">
+          {[...Array(3)].map((_, i) => <SkeletonBox key={i} className="h-16 rounded-xl" />)}
+        </div>
+        {/* Sightings list */}
+        <SkeletonText className="w-1/3" />
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex items-center gap-3 py-2">
+            <SkeletonBox className="h-12 w-12 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <SkeletonText className="w-1/3" />
+              <SkeletonText className="w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <BottomNav />
     </div>
   )
   if (!cat) return null
