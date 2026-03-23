@@ -27,7 +27,8 @@ export default function NavLoader() {
   const [tip, setTip]           = useState(TIPS[0])
   const prevPath    = useRef(pathname)
   const pendingRef  = useRef(false)
-  const timerRef    = useRef<ReturnType<typeof setTimeout>>()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const timerRef    = useRef<any>(undefined)
 
   // Intercepte les clics sur les liens internes
   useEffect(() => {
