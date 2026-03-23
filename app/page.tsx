@@ -248,8 +248,14 @@ export default function GalleriePage() {
         {/* Grille groupée */}
         {catsLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-xl bg-surface border border-border animate-pulse aspect-[3/4]" />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-2xl overflow-hidden border border-border bg-surface">
+                <div className="skeleton aspect-[4/3] rounded-none" />
+                <div className="p-3 space-y-2">
+                  <div className="skeleton h-3 rounded-full w-3/4" />
+                  <div className="skeleton h-2.5 rounded-full w-2/5" />
+                </div>
+              </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (

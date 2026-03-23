@@ -139,6 +139,22 @@ body {
   50%       { box-shadow: 0 0 20px 4px color-mix(in srgb, var(--glow-color, #7C3AED) 50%, transparent), 0 6px 28px rgba(0,0,0,0.14); }
 }
 
+/* ── Skeleton shimmer ────────────────────────────────────── */
+@keyframes skeleton-sweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    var(--color-cream)   50%,
+    var(--color-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.8s ease-in-out infinite;
+}
+
 /* ── Motif zellige (léger, moderne) ─────────────────────── */
 .zellige-bg {
   background-color: var(--color-cream);
