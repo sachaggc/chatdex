@@ -263,6 +263,39 @@ export default function CatDetailPage() {
           </div>
         )}
 
+        {/* Vote politique */}
+        {(() => {
+          const candidate = (cat as any).candidate as { id: string; name: string; emoji: string; color: string; alignment?: { name: string; color: string } } | null
+          const voteAbstain = (cat as any).vote_abstain as boolean | null
+          if (!candidate && !voteAbstain) return null
+          return (
+            <div>
+              <p className="text-xs font-display font-bold text-muted uppercase tracking-widest mb-2">Vote politique</p>
+              {voteAbstain ? (
+                <div className="inline-flex items-center gap-2 rounded-xl bg-surface border border-border px-3 py-2">
+                  <span className="text-base">🤐</span>
+                  <span className="text-sm font-display font-semibold text-muted">Abstention</span>
+                </div>
+              ) : candidate ? (
+                <div
+                  className="inline-flex items-center gap-2.5 rounded-xl px-3 py-2.5 border"
+                  style={{ background: candidate.color + '12', borderColor: candidate.color + '40' }}
+                >
+                  <span className="text-xl">{candidate.emoji}</span>
+                  <div>
+                    <p className="font-display font-bold text-sm text-text leading-tight">{candidate.name}</p>
+                    {candidate.alignment && (
+                      <p className="text-[10px] font-semibold mt-0.5" style={{ color: candidate.alignment.color }}>
+                        {candidate.alignment.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )
+        })()}
+
         {/* Stats automatiques */}
         {stats && count >= 2 && (
           <div>

@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     level: current.level,
     streak_days: streak,
     last_action_at: now.toISOString(),
+    ...((action as string) === 'DISCOVERY' ? { cats_discovered_count: (profile.cats_discovered_count ?? 0) + 1 } : {}),
   }).eq('username', username)
 
   // Log l'événement XP

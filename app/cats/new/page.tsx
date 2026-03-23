@@ -67,6 +67,7 @@ export default function NewCatPage() {
           body: JSON.stringify({ cat_id: newCat.id, photo_url: mainPhotoUrl, lat, lng, street: street.trim() || null, seen_at: photoDate?.toISOString() ?? new Date().toISOString() }),
         })
       }
+      localStorage.setItem('chatdex_last_mutation', Date.now().toString())
       router.push(`/cats/${newCat.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')

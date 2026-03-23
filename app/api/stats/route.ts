@@ -64,7 +64,8 @@ export async function GET() {
     .slice(0, 8)
 
   // Total observations
-  const totalSightings = topCats.reduce((s, c) => s + c.count, 0)
+  const allCatCounts = (cats ?? []).map(c => (c.sightings as unknown as { count: number }[])?.[0]?.count ?? 0)
+  const totalSightings = allCatCounts.reduce((s, n) => s + n, 0)
 
   // Coordonnées moyennes par chat (pour la carte)
   const { data: geoSightings } = await supabase

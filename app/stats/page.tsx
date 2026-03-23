@@ -32,19 +32,26 @@ export default function StatsPage() {
 
   useEffect(() => {
     const CACHE_KEY = 'chatdex_stats_cache'
-    const mutationTs = parseInt(localStorage.getItem('chatdex_last_mutation') ?? '0', 10)
-    try {
-      const cached = localStorage.getItem(CACHE_KEY)
-      if (cached) {
-        const { data, cachedAt } = JSON.parse(cached)
-        const CACHE_TTL = 5 * 60 * 1000
-        if (cachedAt >= mutationTs && Date.now() - cachedAt < CACHE_TTL) { setStats(data); return }
-      }
-    } catch { /* ignore */ }
-    fetch('/api/stats').then(r => r.json()).then(data => {
-      setStats(data)
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }))
-    }).catch(() => {})
+    const CACHE_TTL = 60 * 1000
+
+    function loadStats() {
+      const mutationTs = parseInt(localStorage.getItem('chatdex_last_mutation') ?? '0', 10)
+      try {
+        const cached = localStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const { data, cachedAt } = JSON.parse(cached)
+          if (cachedAt >= mutationTs && Date.now() - cachedAt < CACHE_TTL) { setStats(data); return }
+        }
+      } catch { /* ignore */ }
+      fetch('/api/stats').then(r => r.json()).then(data => {
+        setStats(data)
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }))
+      }).catch(() => {})
+    }
+
+    loadStats()
+    window.addEventListener('focus', loadStats)
+    return () => window.removeEventListener('focus', loadStats)
   }, [])
 
   const maxCount = stats?.topCats?.[0]?.count ?? 1

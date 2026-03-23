@@ -11,7 +11,7 @@ export async function GET(_: NextRequest, { params }: Params) {
 
   const { data: cat, error: catError } = await supabase
     .from('cats')
-    .select('*')
+    .select('*, candidate:candidates(id, name, emoji, color, alignment:political_alignments(id, name, color, position))')
     .eq('id', id)
     .single()
 

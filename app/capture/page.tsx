@@ -147,6 +147,7 @@ export default function CapturePage() {
       // XP check-in + photo de nuit
       awardXp('CHECKIN', primaryId)
       if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', primaryId)
+      localStorage.setItem('chatdex_last_mutation', Date.now().toString())
       router.push(`/cats/${primaryId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -190,6 +191,7 @@ export default function CapturePage() {
       awardXp('NEW_CAT', newCat.id)
       if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', newCat.id)
       if (street.trim()) awardXp('NEW_STREET', newCat.id)
+      localStorage.setItem('chatdex_last_mutation', Date.now().toString())
       router.push(`/cats/${newCat.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -388,6 +390,7 @@ export default function CapturePage() {
                         })
                         awardXp('NEW_CAT', newCat.id)
                         if (isNightPhoto(photoDate)) awardXp('NIGHT_PHOTO', newCat.id)
+                        localStorage.setItem('chatdex_last_mutation', Date.now().toString())
                         // Forcer un rechargement de la galerie (sans cache router)
                         window.location.href = '/'
                       } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setLoading(false) }
