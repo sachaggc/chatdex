@@ -6,7 +6,7 @@ import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'
 import WeatherOverlay from '@/components/WeatherOverlay'
 import { ProfileProvider } from '@/components/ProfileContext'
 import ProfilePicker from '@/components/ProfilePicker'
-import CatProgress from '@/components/CatProgress'
+import NavLoader from '@/components/NavLoader'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -62,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-svh">
         <ProfileProvider>
-          <CatProgress />
+          <NavLoader />
           <ThemeProvider />
           <ServiceWorkerRegistrar />
           <WeatherOverlay />
