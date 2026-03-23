@@ -31,7 +31,19 @@ export default function StatsPage() {
   const [stats, setStats] = useState<StatsData | null>(null)
 
   useEffect(() => {
-    fetch('/api/stats').then(r => r.json()).then(setStats).catch(() => {})
+    const CACHE_KEY = 'chatdex_stats_cache'
+    const mutationTs = parseInt(localStorage.getItem('chatdex_last_mutation') ?? '0', 10)
+    try {
+      const cached = localStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { data, cachedAt } = JSON.parse(cached)
+        if (cachedAt >= mutationTs) { setStats(data); return }
+      }
+    } catch { /* ignore */ }
+    fetch('/api/stats').then(r => r.json()).then(data => {
+      setStats(data)
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }))
+    }).catch(() => {})
   }, [])
 
   const maxCount = stats?.topCats?.[0]?.count ?? 1

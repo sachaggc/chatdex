@@ -78,10 +78,11 @@ export default function CatCard({ cat, index = 0, rarityOverride, categoryMap }:
           {/* Candidate badge — top left (politique) */}
           {cat.candidate && (
             <div
-              className="absolute top-2 left-2 rounded-full px-1.5 py-[3px] text-[9px] font-bold text-white backdrop-blur-sm"
+              className="absolute top-2 left-2 rounded-full px-1.5 py-[3px] text-[9px] font-bold text-white backdrop-blur-sm flex items-center gap-0.5"
               style={{ background: cat.candidate.color + '80', border: `1px solid ${cat.candidate.color}60` }}
             >
-              {cat.candidate.emoji}
+              <span>{cat.candidate.emoji}</span>
+              <span className="max-w-[56px] truncate">{cat.candidate.name.split(' ').slice(-1)[0]}</span>
             </div>
           )}
 

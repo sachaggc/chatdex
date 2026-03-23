@@ -84,6 +84,7 @@ export default function EditCatPage() {
         }),
       })
       if (!res.ok) throw new Error('Erreur modification')
+      localStorage.setItem('chatdex_last_mutation', Date.now().toString())
       router.push(`/cats/${id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -245,6 +246,7 @@ export default function EditCatPage() {
             const label = cat.unnamed ? 'ce chat sans nom' : cat.name
             if (!confirm(`Supprimer ${label} définitivement ?`)) return
             await fetch(`/api/cats/${id}`, { method: 'DELETE' })
+            localStorage.setItem('chatdex_last_mutation', Date.now().toString())
             window.location.href = '/'
           }}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 py-3 text-sm font-display font-semibold text-red-500 hover:bg-red-50 transition-colors"

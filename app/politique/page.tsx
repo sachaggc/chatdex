@@ -347,9 +347,20 @@ export default function PolitiquePage() {
   const [isAuth, setIsAuth] = useState(false)
 
   async function loadStats() {
-    const data = await fetch('/api/political/stats').then(r => r.json())
-    setStats(data)
-    setLoading(false)
+    const CACHE_KEY = 'chatdex_politique_cache'
+    const mutationTs = parseInt(localStorage.getItem('chatdex_last_mutation') ?? '0', 10)
+    try {
+      const cached = localStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { data, cachedAt } = JSON.parse(cached)
+        if (cachedAt >= mutationTs) { setStats(data); setLoading(false); return }
+      }
+    } catch { /* ignore */ }
+    fetch('/api/political/stats').then(r => r.json()).then(data => {
+      setStats(data)
+      setLoading(false)
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }))
+    }).catch(() => setLoading(false))
   }
 
   useEffect(() => {

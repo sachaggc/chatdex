@@ -241,48 +241,52 @@ export default function GalleriePage() {
       {/* ── Daily Missions (collapsed by default) ────────────── */}
       <DailyMissions />
 
-      {/* ── Toolbar : catégories + tri ────────────────────────── */}
-      <div className="flex items-center gap-0 px-4 pt-2.5 pb-2 border-b border-border/40">
-        {/* Category scroll */}
-        <div className="flex-1 flex gap-1.5 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setFilter('all')}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-display font-bold border transition-colors ${
-              filter === 'all' ? 'bg-navy text-white border-navy' : 'bg-surface text-muted border-border'
-            }`}
-          >
-            Tous
-          </button>
-          {categories.map(c => (
-            <button
-              key={c.key}
-              onClick={() => setFilter(filter === c.key ? 'all' : c.key)}
-              className="shrink-0 rounded-full px-3 py-1 text-xs font-display font-bold border transition-colors"
-              style={filter === c.key
-                ? { background: c.color, color: 'white', borderColor: c.color }
-                : { background: 'transparent', color: c.color, borderColor: c.color + '55' }
-              }
-            >
-              {c.label}
-            </button>
-          ))}
+      {/* ── Toolbar ───────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 px-4 pt-2.5 pb-2 border-b border-border/40">
+        {/* Active filter summary */}
+        <div className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {filter !== 'all' && (() => {
+            const cat = categories.find(c => c.key === filter)
+            return cat ? (
+              <button
+                onClick={() => setFilter('all')}
+                className="shrink-0 rounded-full px-2.5 py-1 text-xs font-display font-bold text-white flex items-center gap-1"
+                style={{ background: cat.color }}
+              >
+                {cat.label} <X size={10} />
+              </button>
+            ) : null
+          })()}
+          {sortBy !== 'rarity' && (
+            <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-display font-semibold text-muted bg-border/40 border border-border">
+              {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
+            </span>
+          )}
+          {filter === 'all' && sortBy === 'rarity' && (
+            <span className="text-xs text-muted font-display">Tous les chats</span>
+          )}
         </div>
 
-        {/* Sort button */}
+        {/* Filter + sort button */}
         <button
           onClick={() => setShowSortSheet(true)}
-          className="shrink-0 ml-2 flex items-center gap-1 rounded-full px-2.5 py-1 border text-xs font-display font-bold transition-colors"
-          style={sortBy !== 'rarity'
+          className="shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 border text-xs font-display font-bold transition-colors"
+          style={filter !== 'all' || sortBy !== 'rarity'
             ? { background: '#1B2D4A', color: 'white', borderColor: '#1B2D4A' }
             : { background: 'transparent', color: 'var(--color-muted)', borderColor: 'var(--color-border)' }
           }
         >
           <SlidersHorizontal size={11} />
-          <span>{SORT_OPTIONS.find(o => o.key === sortBy)?.label.split(' ')[0]}</span>
+          Filtres
+          {(filter !== 'all' || sortBy !== 'rarity') && (
+            <span className="ml-0.5 h-4 w-4 rounded-full bg-white/25 text-[9px] font-black flex items-center justify-center">
+              {(filter !== 'all' ? 1 : 0) + (sortBy !== 'rarity' ? 1 : 0)}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* ── Sort bottom sheet ─────────────────────────────────── */}
+      {/* ── Filter + Sort bottom sheet ─────────────────────────── */}
       <AnimatePresence>
         {showSortSheet && (
           <>
@@ -301,12 +305,14 @@ export default function GalleriePage() {
               transition={{ type: 'spring', damping: 30, stiffness: 320 }}
             >
               <div className="w-10 h-1 rounded-full bg-border mx-auto mt-3 mb-4" />
-              <p className="px-5 text-xs font-display font-black text-muted uppercase tracking-wider mb-3">Trier par</p>
+
+              {/* Sort section */}
+              <p className="px-5 text-xs font-display font-black text-muted uppercase tracking-wider mb-2">Trier par</p>
               {SORT_OPTIONS.map(opt => (
                 <button
                   key={opt.key}
-                  onClick={() => { setSortBy(opt.key); setShowSortSheet(false) }}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-border/30"
+                  onClick={() => setSortBy(opt.key)}
+                  className="w-full flex items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-border/30"
                   style={{ background: sortBy === opt.key ? 'var(--color-border)' : 'transparent' }}
                 >
                   <div className="flex-1">
@@ -316,6 +322,40 @@ export default function GalleriePage() {
                   {sortBy === opt.key && <span className="text-brand text-lg">✓</span>}
                 </button>
               ))}
+
+              {/* Category section */}
+              <p className="px-5 mt-4 mb-2 text-xs font-display font-black text-muted uppercase tracking-wider">Catégorie</p>
+              <div className="px-5 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`rounded-full px-3 py-1.5 text-xs font-display font-bold border transition-colors ${
+                    filter === 'all' ? 'bg-navy text-white border-navy' : 'bg-surface text-muted border-border'
+                  }`}
+                >
+                  Tous
+                </button>
+                {categories.map(c => (
+                  <button
+                    key={c.key}
+                    onClick={() => setFilter(filter === c.key ? 'all' : c.key)}
+                    className="rounded-full px-3 py-1.5 text-xs font-display font-bold border transition-colors"
+                    style={filter === c.key
+                      ? { background: c.color, color: 'white', borderColor: c.color }
+                      : { background: 'transparent', color: c.color, borderColor: c.color + '55' }
+                    }
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowSortSheet(false)}
+                className="mx-5 mt-5 w-[calc(100%-2.5rem)] rounded-xl py-3 text-sm font-display font-bold text-white"
+                style={{ background: '#1B2D4A' }}
+              >
+                Appliquer
+              </button>
             </motion.div>
           </>
         )}
