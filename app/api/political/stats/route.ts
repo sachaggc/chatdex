@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+const POLITICAL_ORDER = ['arthaud','melenchon','ruffin','tondelier','glucksmann','macron','attal','retailleau','lepen','knafo','soral']
+function politicalIdx(name: string): number {
+  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const i = POLITICAL_ORDER.findIndex(o => n.includes(o))
+  return i === -1 ? 50 : i
+}
+
 export async function GET() {
   // All cats with candidate info
   const { data: cats, error: catsErr } = await supabase
@@ -45,6 +52,8 @@ export async function GET() {
     pct:   total > 0 ? Math.round(((candidateCounts[c.id] ?? 0) / total) * 100) : 0,
   })).sort((a, b) => b.count - a.count)
 
+  const candidateSpectrum = [...candidateStats].sort((a, b) => politicalIdx(a.name) - politicalIdx(b.name))
+
   // Count per alignment
   const alignmentCounts: Record<string, number> = {}
   for (const cat of cats ?? []) {
@@ -58,7 +67,7 @@ export async function GET() {
     ...a,
     count: alignmentCounts[a.id] ?? 0,
     pct:   total > 0 ? Math.round(((alignmentCounts[a.id] ?? 0) / total) * 100) : 0,
-  }))
+  })).sort((a, b) => politicalIdx(a.name) - politicalIdx(b.name))
 
   // Per street breakdown (using sightings.street)
   const streetMap: Record<string, { total: number; byCandidate: Record<string, number> }> = {}
@@ -91,6 +100,7 @@ export async function GET() {
     abstentions,
     undecided,
     candidateStats,
+    candidateSpectrum,
     alignmentStats,
     streetStats,
     catList,

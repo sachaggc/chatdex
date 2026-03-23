@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+const POLITICAL_ORDER = ['arthaud','melenchon','ruffin','tondelier','glucksmann','macron','attal','retailleau','lepen','knafo','soral']
+function politicalIdx(name: string): number {
+  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const i = POLITICAL_ORDER.findIndex(o => n.includes(o))
+  return i === -1 ? 50 : i
+}
+
 export async function GET() {
   const { data, error } = await supabase
     .from('candidates')
     .select('*, alignment:political_alignments(id, name, color, position)')
     .order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  const sorted = [...(data ?? [])].sort((a, b) => politicalIdx(a.name) - politicalIdx(b.name))
+  return NextResponse.json(sorted)
 }
 
 export async function POST(req: Request) {

@@ -37,7 +37,8 @@ export default function StatsPage() {
       const cached = localStorage.getItem(CACHE_KEY)
       if (cached) {
         const { data, cachedAt } = JSON.parse(cached)
-        if (cachedAt >= mutationTs) { setStats(data); return }
+        const CACHE_TTL = 5 * 60 * 1000
+        if (cachedAt >= mutationTs && Date.now() - cachedAt < CACHE_TTL) { setStats(data); return }
       }
     } catch { /* ignore */ }
     fetch('/api/stats').then(r => r.json()).then(data => {

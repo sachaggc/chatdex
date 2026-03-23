@@ -41,11 +41,15 @@ export default function EditCatPage() {
       setVoteAbstain(data.vote_abstain ?? false)
     })
     fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
+    const POLITICAL_ORDER = ['arthaud','melenchon','ruffin','tondelier','glucksmann','macron','attal','retailleau','lepen','knafo','soral']
+    function politicalIdx(name: string): number {
+      const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const i = POLITICAL_ORDER.findIndex(o => n.includes(o))
+      return i === -1 ? 50 : i
+    }
     fetch('/api/political/candidates').then(r => r.json()).then((data: Candidate[]) => {
-      // Tri gauche → droite par position d'alignement
-      const sorted = [...data].sort((a, b) =>
-        (a.alignment?.position ?? 999) - (b.alignment?.position ?? 999)
-      )
+      // Tri gauche → droite par ordre politique
+      const sorted = [...data].sort((a, b) => politicalIdx(a.name) - politicalIdx(b.name))
       setCandidates(sorted)
     }).catch(() => {})
   }, [id])

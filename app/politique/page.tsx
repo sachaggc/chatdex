@@ -25,6 +25,7 @@ interface StreetStat { street: string; total: number; byCandidate: Record<string
 interface Stats {
   total: number; abstentions: number; undecided: number
   candidateStats: Candidate[]
+  candidateSpectrum: Candidate[]
   alignmentStats: AlignmentStat[]
   streetStats: StreetStat[]
   catList: CatEntry[]
@@ -353,7 +354,8 @@ export default function PolitiquePage() {
       const cached = localStorage.getItem(CACHE_KEY)
       if (cached) {
         const { data, cachedAt } = JSON.parse(cached)
-        if (cachedAt >= mutationTs) { setStats(data); setLoading(false); return }
+        const CACHE_TTL = 5 * 60 * 1000
+        if (cachedAt >= mutationTs && Date.now() - cachedAt < CACHE_TTL) { setStats(data); setLoading(false); return }
       }
     } catch { /* ignore */ }
     fetch('/api/political/stats').then(r => r.json()).then(data => {
@@ -517,7 +519,7 @@ export default function PolitiquePage() {
               )}
 
               {/* Cats par candidat */}
-              {stats?.candidateStats.filter(c => c.count > 0).map(cand => (
+              {stats && (stats.candidateSpectrum ?? stats.candidateStats).filter(c => c.count > 0).map(cand => (
                 <div key={cand.id} className="rounded-2xl border border-border bg-surface overflow-hidden">
                   <div className="px-4 py-2.5 flex items-center gap-2" style={{ borderLeft: `3px solid ${cand.color}` }}>
                     <span>{cand.emoji}</span>
