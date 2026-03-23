@@ -8,7 +8,7 @@ import { useProfile } from '@/components/ProfileContext'
 
 export default function DailyMissions() {
   const { profile } = useProfile()
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   const [missions, setMissions] = useState<Mission[]>([])
   const [missionState, setMissionState] = useState<MissionState>({ progress: {}, completed: [] })
 
